@@ -1,0 +1,6 @@
+src/out/
+src/deliver/
+__pycache__/
+*.pyc
+*.npy
+.DS_Store

@@ -1,0 +1,1206 @@
+<title>Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#EEF2EC; --panel:#F8FAF6; --panel-2:#E3EAE3; --ink:#1D2A24; --ink-2:#4E5E55; --ink-3:#7C8B82;
+  --line:#CAD5CC; --accent:#1F8F8A; --accent-ink:#FFFFFF; --sun:#E8A33A;
+  --p-int:#D8643B; --p-open:#3F86C9; --p-water:#1F9E95; --p-myst:#7B5EA7; --p-music:#8A7A3C;
+  --cell:#1F8F8A; --cell-q:#E8A33A; --shadow:0 1px 0 rgba(29,42,36,.06);
+  --f-display:"Pixelify Sans", "Silkscreen", ui-monospace, monospace;
+  --f-ui:"Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0F1715; --panel:#16211E; --panel-2:#1D2B27; --ink:#E3ECE6; --ink-2:#A3B5AB; --ink-3:#71847A;
+    --line:#2B3A35; --accent:#45C2BA; --accent-ink:#06201E; --sun:#F1B955;
+    --p-int:#EE8057; --p-open:#6CA8E3; --p-water:#44C3B8; --p-myst:#A58AD6; --p-music:#C8B56A;
+    --cell:#45C2BA; --cell-q:#F1B955; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0F1715; --panel:#16211E; --panel-2:#1D2B27; --ink:#E3ECE6; --ink-2:#A3B5AB; --ink-3:#71847A;
+  --line:#2B3A35; --accent:#45C2BA; --accent-ink:#06201E; --sun:#F1B955;
+  --p-int:#EE8057; --p-open:#6CA8E3; --p-water:#44C3B8; --p-myst:#A58AD6; --p-music:#C8B56A;
+  --cell:#45C2BA; --cell-q:#F1B955; --shadow:none;
+}
+*{box-sizing:border-box}
+body{background:var(--ground); color:var(--ink); font-family:var(--f-ui); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px; margin:0 auto; padding-inline:clamp(16px,3vw,28px); padding-block:18px 56px; display:flex; flex-direction:column; gap:18px}
+button{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+
+/* ---- top bar ---- */
+.top{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+.brand h1{font-family:var(--f-display); font-weight:600; font-size:clamp(30px,4.2vw,42px); line-height:1; margin:0; letter-spacing:.01em}
+.brand p{margin:0; color:var(--ink-2); font-size:14px}
+.transport{display:flex; align-items:center; gap:12px}
+.play{display:inline-flex; align-items:center; gap:10px; border:0; border-radius:999px; padding:10px 20px 10px 14px; background:var(--accent); color:var(--accent-ink); font-weight:600; font-size:15px; cursor:pointer}
+.play:hover{filter:brightness(1.06)}
+.play svg{width:18px; height:18px}
+.status{font-family:var(--f-mono); font-size:12px; color:var(--ink-2); min-height:1.2em}
+
+/* ---- viewport ---- */
+.viewport{position:relative; width:100%; aspect-ratio:320/140; max-width:100%; border-radius:10px; overflow:hidden; background:#0b1512; box-shadow:0 10px 30px -18px rgba(10,30,25,.55)}
+.viewport canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+#scene{image-rendering:pixelated; image-rendering:crisp-edges}
+#glow{filter:blur(clamp(4px,1.1vw,11px)); mix-blend-mode:screen; opacity:.95; pointer-events:none}
+.hud{position:absolute; inset:0; pointer-events:none; color:#F4F7F2; text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.35)}
+.hud .tl{position:absolute; left:clamp(10px,2vw,20px); top:clamp(8px,1.6vw,16px)}
+.hud .tr{position:absolute; right:clamp(10px,2vw,20px); top:clamp(8px,1.6vw,16px); text-align:right; font-family:var(--f-mono); font-size:clamp(11px,1.3vw,13px)}
+.hud .bl{position:absolute; left:clamp(10px,2vw,20px); bottom:clamp(8px,1.6vw,14px); font-family:var(--f-mono); font-size:clamp(11px,1.3vw,13px)}
+.hud .br{position:absolute; right:clamp(10px,2vw,20px); bottom:clamp(8px,1.6vw,14px); text-align:right; font-size:clamp(11px,1.3vw,13px)}
+.area-name{font-family:var(--f-display); font-size:clamp(18px,2.6vw,28px); line-height:1.05}
+.area-mood{font-size:clamp(11px,1.3vw,13px); opacity:.9}
+.pill{display:inline-block; padding:2px 8px; border-radius:999px; background:rgba(8,22,18,.55); text-shadow:none}
+.bigclock{font-size:clamp(14px,1.8vw,18px); font-weight:500}
+
+/* ---- deck ---- */
+.deck{display:grid; grid-template-columns:1.25fr 1fr; gap:18px}
+@media (max-width:820px){.deck{grid-template-columns:1fr}}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; box-shadow:var(--shadow)}
+.panel h2{margin:0 0 12px; font-size:12px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2); font-weight:600; display:flex; justify-content:space-between; gap:8px}
+.panel h2 span{letter-spacing:0; text-transform:none; font-weight:500; color:var(--ink-3); font-family:var(--f-mono); font-size:12px}
+.params{display:grid; gap:12px}
+.param{display:grid; grid-template-columns:7.2rem 1fr 3rem; align-items:center; gap:12px}
+.param label{font-weight:600; font-size:14px}
+.param small{display:block; font-weight:400; color:var(--ink-3); font-size:12px; line-height:1.25}
+.param output{font-family:var(--f-mono); font-size:13px; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2)}
+.param.music{padding-top:12px; border-top:1px dashed var(--line)}
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:28px; background:transparent; cursor:pointer; --c:var(--accent); --v:50%}
+input[type=range]::-webkit-slider-runnable-track{height:6px; border-radius:6px; background:linear-gradient(90deg,var(--c) 0 var(--v), var(--panel-2) var(--v) 100%)}
+input[type=range]::-moz-range-track{height:6px; border-radius:6px; background:var(--panel-2)}
+input[type=range]::-moz-range-progress{height:6px; border-radius:6px; background:var(--c)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:18px; height:18px; margin-top:-6px; border-radius:4px; background:var(--panel); border:2px solid var(--c); box-shadow:0 1px 2px rgba(0,0,0,.2)}
+input[type=range]::-moz-range-thumb{width:14px; height:14px; border-radius:4px; background:var(--panel); border:2px solid var(--c)}
+.scale-ends{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-top:-4px}
+.route{display:flex; flex-direction:column; gap:14px}
+.group-label{font-size:12px; color:var(--ink-2); font-weight:600; margin-bottom:6px}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{border:1px solid var(--line); background:var(--panel); border-radius:999px; padding:5px 11px; font-size:13px; cursor:pointer; line-height:1.3}
+.chip:hover{border-color:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+.chip .dot{display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:6px; vertical-align:1px; background:currentColor; opacity:.5}
+.chip.here .dot{background:var(--sun); opacity:1}
+.toggle-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.switch{display:inline-flex; align-items:center; gap:10px; cursor:pointer; border:0; background:none; padding:0; font-size:14px; font-weight:600}
+.switch .knob{width:38px; height:22px; border-radius:999px; background:var(--panel-2); border:1px solid var(--line); position:relative; transition:background .2s}
+.switch .knob::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--ink-3); transition:transform .2s, background .2s}
+.switch[aria-checked="true"] .knob{background:var(--accent); border-color:var(--accent)}
+.switch[aria-checked="true"] .knob::after{transform:translateX(16px); background:var(--accent-ink)}
+.place{font-size:13px; color:var(--ink-2); font-style:italic; text-align:right}
+.pending{font-size:13px; color:var(--ink-2); min-height:1.3em}
+.pending b{color:var(--ink); font-weight:600}
+
+/* ---- layer board ---- */
+.board-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:10px}
+.board-head h2{margin:0}
+.legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-2)}
+.legend i{display:inline-block; width:12px; height:10px; border-radius:2px; vertical-align:-1px; margin-right:5px}
+.lanes{overflow-x:auto}
+.lanes-inner{min-width:620px}
+.lrow{display:grid; grid-template-columns:8.6rem 3.6rem 2.8rem 1fr; align-items:center; gap:10px; padding:3px 0}
+.lrow.sep{margin-top:8px; padding-top:9px; border-top:1px solid var(--line)}
+.lname{font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.lname em{font-style:normal; color:var(--ink-3); font-weight:400; font-size:12px; margin-left:4px}
+.lrow.absent .lname, .lrow.absent .lane{opacity:.35}
+.force{border:1px solid var(--line); background:var(--panel); border-radius:6px; font-size:11px; padding:2px 0; cursor:pointer; font-family:var(--f-mono); color:var(--ink-2); width:100%}
+.force[data-f="on"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.force[data-f="off"]{background:var(--panel-2); color:var(--ink-3); text-decoration:line-through}
+.meter{height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden}
+.meter b{display:block; height:100%; width:0; background:var(--accent); border-radius:3px; transition:width .08s linear}
+.lane{position:relative; display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
+.phr{display:grid; grid-template-columns:repeat(4,1fr); gap:2px}
+.cell{height:16px; border-radius:2px; background:var(--panel-2); position:relative; overflow:hidden}
+.cell i{position:absolute; inset:0; background:var(--cell); opacity:0}
+.cell.q i{background:repeating-linear-gradient(135deg, var(--cell-q) 0 3px, transparent 3px 6px)}
+.cell.now{outline:1.5px solid var(--sun); outline-offset:0}
+.chordrow .cell{background:none; height:auto; font-family:var(--f-mono); font-size:10px; color:var(--ink-3); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:clip}
+.chordrow .cell.now{outline:none; color:var(--ink); font-weight:500}
+.barnums .cell{background:none; height:auto; font-family:var(--f-mono); font-size:10px; color:var(--ink-3); text-align:center}
+
+/* ---- notes ---- */
+.notes{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+@media (max-width:820px){.notes{grid-template-columns:1fr}}
+.notes .panel p, .notes .panel li{max-width:66ch}
+.notes h3{font-size:16px; margin:0 0 8px; font-weight:700}
+.notes p{margin:0 0 10px; color:var(--ink)}
+.notes ul{margin:0 0 10px; padding-left:18px}
+.notes li{margin:2px 0}
+.facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px 18px; margin:4px 0 6px}
+.fact dt{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+.fact dd{margin:0; font-family:var(--f-mono); font-size:14px}
+.full{grid-column:1 / -1}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:13px; min-width:640px}
+th,td{text-align:left; padding:7px 10px 7px 0; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+td.code, span.code{font-family:var(--f-mono); font-size:12px}
+.chords{font-family:var(--f-mono); font-size:12px; color:var(--ink-2)}
+footer{font-size:12px; color:var(--ink-3)}
+@media (prefers-reduced-motion: reduce){ .meter b{transition:none} }
+@media (max-width:560px){
+  .param{grid-template-columns:6rem 1fr 2.6rem}
+  .brand p{font-size:13px}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Canopy</h1>
+      <p>An adaptive jungle soundscape for a pixel-art adventure · 90 BPM · D</p>
+    </div>
+    <div class="transport">
+      <span class="status" id="status" role="status">48 kHz stems · press play</span>
+      <button class="play" id="play" type="button" aria-label="Play">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path id="playIcon" d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
+        <span id="playLabel">Play</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="viewport" aria-label="Live jungle scene">
+    <canvas id="scene" width="320" height="140"></canvas>
+    <canvas id="glow" width="320" height="140"></canvas>
+    <div class="hud">
+      <div class="tl"><div class="area-name" id="hudArea">Jungle Exploration</div><div class="area-mood" id="hudMood">warm, curious, lightly rhythmic</div></div>
+      <div class="tr"><div class="bigclock" id="hudClock">Bar 01 · 1</div><div id="hudPhrase">Phrase 1 of 4</div></div>
+      <div class="bl"><span class="pill" id="hudChord">Dmaj9</span></div>
+      <div class="br"><span class="pill" id="hudNext">The jungle is waiting</span></div>
+    </div>
+  </section>
+
+  <section class="deck">
+    <div class="panel">
+      <h2>Environment <span>quantized to 4-bar phrases</span></h2>
+      <div class="params">
+        <div class="param"><label for="p-int">Intensity<small>momentum, rhythm</small></label><input id="p-int" type="range" min="0" max="100" value="30" style="--c:var(--p-int)"><output id="o-int">0.30</output></div>
+        <div class="param"><label for="p-open">Openness<small>vistas, space</small></label><input id="p-open" type="range" min="0" max="100" value="35" style="--c:var(--p-open)"><output id="o-open">0.35</output></div>
+        <div class="param"><label for="p-water">Water<small>rivers, falls</small></label><input id="p-water" type="range" min="0" max="100" value="30" style="--c:var(--p-water)"><output id="o-water">0.30</output></div>
+        <div class="param"><label for="p-myst">Mystery<small>ruins, night</small></label><input id="p-myst" type="range" min="0" max="100" value="10" style="--c:var(--p-myst)"><output id="o-myst">0.10</output></div>
+        <div class="param music"><label for="p-music">Music bed<small>under the jungle</small></label>
+          <div><input id="p-music" type="range" min="0" max="100" value="70" style="--c:var(--p-music)"><div class="scale-ends"><span>Pure jungle</span><span>Soft bed</span></div></div>
+          <output id="o-music">70%</output></div>
+      </div>
+    </div>
+    <div class="panel route">
+      <div>
+        <div class="group-label">Area</div>
+        <div class="chips" id="areas" role="group" aria-label="Area">
+          <button class="chip" type="button" data-area="auto" aria-pressed="true">Follow environment</button>
+        </div>
+        <div class="pending" id="pending" aria-live="polite"></div>
+      </div>
+      <div>
+        <div class="group-label">Music arrangement</div>
+        <div class="chips" id="modes" role="group" aria-label="Arrangement">
+          <button class="chip" type="button" data-mode="breathe" aria-pressed="true">Breathing</button>
+          <button class="chip" type="button" data-mode="sparse" aria-pressed="false">Sparse</button>
+          <button class="chip" type="button" data-mode="medium" aria-pressed="false">Medium</button>
+          <button class="chip" type="button" data-mode="full" aria-pressed="false">Full</button>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <button class="switch" id="explore" type="button" role="switch" aria-checked="false"><span class="knob"></span>Auto-explore</button>
+        <span class="place" id="place">Moves the sliders like a player walking</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="board-head">
+      <h2>Layers this pass <span id="passInfo">16 bars · 42.7 s loop</span></h2>
+      <div class="legend"><span><i style="background:var(--cell)"></i>playing (brightness = level)</span><span><i style="background:repeating-linear-gradient(135deg,var(--cell-q) 0 3px,transparent 3px 6px)"></i>queued for the next phrase</span><span>Tap auto / on / off to force a layer (applies on the next bar)</span></div>
+    </div>
+    <div class="lanes"><div class="lanes-inner" id="lanes"></div></div>
+  </section>
+
+  <section class="notes">
+    <div class="panel full">
+      <h3>How the score is built</h3>
+      <dl class="facts">
+        <div class="fact"><dt>Tempo</dt><dd>90 BPM, 4/4</dd></div>
+        <div class="fact"><dt>Loop</dt><dd>16 bars = 42.667 s</dd></div>
+        <div class="fact"><dt>Key</dt><dd>D, Lydian-tinged</dd></div>
+        <div class="fact"><dt>Grid</dt><dd>128 000 samples/bar</dd></div>
+        <div class="fact"><dt>Areas</dt><dd>5</dd></div>
+        <div class="fact"><dt>Layers</dt><dd>up to 12 per area</dd></div>
+      </dl>
+      <p>The jungle leads. Every area has its own ambience recipe, recorded as four alternate takes that rotate each pass, so the forest does not repeat for almost three minutes. Water, wildlife and a set of bird calls tuned to the harmony sit on top. The music bed underneath has no melody; it is harmony, bass and soft percussion that the conductor builds up and lets fall away.</p>
+    </div>
+    <div class="panel">
+      <h3>What the controls do</h3>
+      <ul>
+        <li><b>Intensity</b> raises the music bed's ceiling and brings in hand drums, shaker and marimba. It also makes the wildlife busier.</li>
+        <li><b>Openness</b> favours pad and e-piano over rhythm and widens the room. High openness leads to the Canopy Vista.</li>
+        <li><b>Water</b> lifts the river, waterfall and drips, adds kalimba ripples and leads to the River &amp; Waterfall.</li>
+        <li><b>Mystery</b> thins the percussion, darkens the top end and brings out night creatures. High mystery leads to the Moss Ruins.</li>
+        <li><b>Music bed</b> sets how much music sits under the jungle. At zero you hear only the jungle.</li>
+      </ul>
+      <p>The highest of Water, Openness, Mystery and Intensity picks the area; Jungle Exploration is home when nothing stands out.</p>
+    </div>
+    <div class="panel">
+      <h3>How changes stay musical</h3>
+      <ul>
+        <li>Layers change only on 4-bar phrase boundaries. Harmony layers (pad, e-piano, bass) may only leave on 8-bar boundaries.</li>
+        <li>Areas change on 8- or 16-bar boundaries. Every area's bar 8 and bar 16 rest on an A chord and every bar 1 is a D chord, so any area can follow any other.</li>
+        <li>A layer that leaves hands over to its own rendered ring-out, so reverb and echoes decay naturally.</li>
+        <li>Ambience and water crossfade over four seconds instead of cutting.</li>
+        <li>Area changes are marked with jungle sounds: a passing shower, a gust through the canopy, a flock taking off, a woodpecker roll.</li>
+      </ul>
+    </div>
+    <div class="panel full">
+      <h3>The five areas</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Area</th><th>The jungle</th><th>Music bed</th><th>Harmony, bars 1–16</th></tr></thead>
+        <tbody id="areaTable"></tbody>
+      </table></div>
+    </div>
+    <div class="panel full">
+      <h3>Using the stems in an engine</h3>
+      <p>Each area's layers are separate files of exactly 2 048 000 samples at 48 kHz. Start them together, loop them whole, and set each layer's volume. Files are named <span class="code">A_amb.ogg</span>, <span class="code">B_water.ogg</span> and so on. <span class="code">A_amb2</span>–<span class="code">A_amb4</span> are the alternate ambience takes. Every layer also has <span class="code">_tail8</span> and <span class="code">_tail16</span> ring-outs: when a layer stops at bar 9 or at the loop point, play the matching tail from that moment. Transition sounds start one bar before the downbeat they lead into.</p>
+    </div>
+  </section>
+  <footer>All sound in Canopy is synthesized: no recordings, samples or existing music. Best in a desktop browser with headphones.</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const qs = (s, r = document) => r.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ------------------------------------------------------------------ constants
+const LAYERS = ['amb', 'water', 'wildlife', 'birds', 'woods', 'shaker', 'drums', 'bass', 'keys', 'pad', 'marimba', 'kalimba'];
+const LABEL = {amb:'Ambience', water:'Water', wildlife:'Wildlife', birds:'Tuned birds', woods:'Wood knocks', shaker:'Shaker',
+  drums:'Hand drums', bass:'Bass', keys:'E-piano', pad:'Pad', marimba:'Marimba', kalimba:'Kalimba'};
+const JUNGLE = new Set(['amb', 'water', 'wildlife', 'birds']);
+const BEDS = new Set(['amb', 'water', 'wildlife']);
+const HARMONIC = new Set(['keys', 'pad', 'bass']);
+const TAKES = ['amb', 'amb2', 'amb3', 'amb4'];
+const AREAS = ['A', 'B', 'C', 'D', 'E'];
+const WATER_BASE = {A:.75, B:1, C:.8, D:1, E:.5};
+const ORDER = {
+  A: [[['pad'], ['bass','keys'], ['woods','shaker'], ['drums','marimba']], [['woods'], ['pad','keys'], ['bass','shaker'], ['drums','marimba']]],
+  B: [[['pad'], ['kalimba','keys'], ['bass','shaker'], ['marimba','drums','woods']], [['kalimba'], ['pad','bass'], ['keys','marimba'], ['shaker','drums','woods']]],
+  C: [[['pad'], ['keys','bass'], ['kalimba','woods'], ['marimba','drums','shaker']], [['pad','woods'], ['keys'], ['bass','kalimba'], ['marimba','drums','shaker']]],
+  D: [[['woods'], ['pad'], ['bass','keys'], ['drums','shaker','marimba']], [['pad'], ['woods','bass'], ['keys'], ['drums','shaker','marimba']]],
+  E: [[['woods','shaker'], ['bass','drums'], ['marimba','keys'], ['kalimba','pad']], [['drums','bass'], ['woods','marimba'], ['shaker','keys'], ['pad','kalimba']]],
+};
+const AREA_TEXT = {
+  A: ['Insects, distant birds, frogs, leaves; cicada swells, songbirds, woodpeckers', 'Pad, e-piano, bass, wood knocks, shaker, hand drums, marimba'],
+  B: ['A babbling brook, a waterfall tuned to the chords, tuned drips, tree frogs', 'Shimmering pad, kalimba ripples, e-piano arpeggios, soft frame drum'],
+  C: ['Wind across the canopy, raptor cries far off, a distant waterfall', 'Wide pad, long bass notes, e-piano swells, felt-tom swells'],
+  D: ['Crickets, frogs, wind resonating in stone, cave drips', 'A D–A drone with shifting colours, heartbeat toms, seed rattles'],
+  E: ['Busy birdsong, cicadas, woodpeckers', 'Driving bass, 16th-note marimba, hand drums, shaker'],
+};
+const PLACES = [
+  {name:'a sunny clearing', p:[.35,.3,.2,.08]}, {name:'the riverbank', p:[.25,.35,.8,.1]}, {name:'the waterfall pool', p:[.2,.5,1,.15]},
+  {name:'a canopy lookout', p:[.2,.95,.2,.1]}, {name:'the old temple', p:[.15,.2,.25,.95]}, {name:'a vine run', p:[.95,.35,.15,.05]},
+  {name:'the rope bridge', p:[.6,.72,.3,.1]}, {name:'the stilt village', p:[.45,.42,.3,.1]}, {name:'a misty pool', p:[.1,.3,.72,.6]},
+];
+
+// ------------------------------------------------------------------ state
+const P = {intensity:.30, openness:.35, water:.30, mystery:.10};
+const UI = {music:.7, mode:'breathe', follow:true, pinned:'A', explore:false, force:{}};
+LAYERS.forEach(l => UI.force[l] = 'auto');
+let META = null;
+const E = {ctx:null, playing:false, inst:null, files:new Map(), dec:new Map(), ready:new Map(), tails:new Map(), tready:new Map(),
+  stingers:null, plannedUntil:0, planning:false, visits:{A:0,B:0,C:0,D:0,E:0}, takeBase:{A:0,B:0,C:0,D:0,E:0}, lastSting:-1e9, lanes:new Map(), bus:{}, starting:false,
+  forceDirty:false};
+const Dir = {level:1, dir:'up', hold:0, variant:0};
+
+// ------------------------------------------------------------------ helpers
+let BAR = 128000 / 48000, BEAT = BAR / 4, LOOP = 16 * BAR, PHRASE = 4 * BAR, XF = 4.0;
+function setStatus(t){ qs('#status').textContent = t; }
+function base(k){ return k.startsWith('amb') ? 'amb' : k; }
+function has(sec, stem){ return META && META.stems[sec].includes(stem); }
+function argmax(o){ let bk = null, bv = -1e9; for (const k in o) if (o[k] > bv){ bv = o[k]; bk = k; } return bk; }
+
+function decode(ab){
+  return new Promise((res, rej) => {
+    try {
+      const p = E.ctx.decodeAudioData(ab, res, rej);
+      if (p && typeof p.then === 'function') p.then(res, rej);
+    } catch (e) { rej(e); }
+  });
+}
+function file(key){
+  if (!E.files.has(key)) {
+    E.files.set(key, fetch('audio/' + key + '.mp4').then(r => {
+      if (!r.ok) throw new Error('Could not load ' + key + ' (HTTP ' + r.status + ')');
+      return r.arrayBuffer();
+    }));
+  }
+  return E.files.get(key);
+}
+// the codec-proof layout: find the sync impulse, then cut the content out exactly
+function extract(buf, off48, len48){
+  const sc = E.ctx.sampleRate / 48000, L = META.layout;
+  const c0 = buf.getChannelData(0);
+  let p = 0, mx = 0;
+  const lim = Math.min(c0.length, Math.round(7000 * sc));
+  for (let i = 0; i < lim; i++){ const v = Math.abs(c0[i]); if (v > mx){ mx = v; p = i; } }
+  const start = p + Math.round((L.head - L.imp + L.pad + off48) * sc);
+  const len = Math.round(len48 * sc);
+  const out = E.ctx.createBuffer(2, len, E.ctx.sampleRate);
+  for (let c = 0; c < 2; c++){
+    const src = buf.getChannelData(Math.min(c, buf.numberOfChannels - 1));
+    out.copyToChannel(src.subarray(start, Math.min(src.length, start + len)), c);
+  }
+  return out;
+}
+function loopBuf(key){
+  if (!E.dec.has(key)) {
+    const pr = file(key).then(ab => decode(ab.slice(0))).then(b => { const x = extract(b, 0, META.loop); E.ready.set(key, x); return x; });
+    pr.catch(err => { E.dec.delete(key); console.warn(err); });
+    E.dec.set(key, pr);
+  }
+  return E.dec.get(key);
+}
+function tailBuf(key){
+  if (!E.tails.has(key)) {
+    const pr = file(key + '_tails').then(ab => decode(ab.slice(0))).then(b => {
+      const t = {t16: extract(b, 0, META.tail), t8: extract(b, META.tail + META.gap, META.tail)};
+      E.tready.set(key, t); return t;
+    });
+    pr.catch(err => { E.tails.delete(key); console.warn(err); });
+    E.tails.set(key, pr);
+  }
+  return E.tails.get(key);
+}
+function releaseSection(sec){
+  for (const k of [...E.ready.keys()]) if (k.startsWith(sec + '_')) { E.ready.delete(k); E.dec.delete(k); }
+  for (const k of [...E.tready.keys()]) if (k.startsWith(sec + '_')) { E.tready.delete(k); E.tails.delete(k); }
+}
+function sectionFiles(sec){ return META.stems[sec].map(s => sec + '_' + s); }
+function prefetchSection(sec){ return Promise.all(sectionFiles(sec).map(file)); }
+
+// ------------------------------------------------------------------ audio graph
+function makeIR(ctx, dur){
+  const n = Math.round(dur * ctx.sampleRate), b = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let c = 0; c < 2; c++){
+    const d = b.getChannelData(c); let lp = 0;
+    for (let i = 0; i < n; i++){
+      const t = i / ctx.sampleRate;
+      const w = Math.random() * 2 - 1;
+      lp += (w - lp) * (0.35 - 0.25 * Math.min(1, t / dur));
+      d[i] = lp * Math.pow(10, -3 * t / dur) * Math.min(1, t / 0.03);
+    }
+  }
+  return b;
+}
+function initAudio(){
+  let ctx;
+  try { ctx = new AudioContext({sampleRate:48000, latencyHint:'playback'}); } catch (e) { ctx = new AudioContext(); }
+  E.ctx = ctx;
+  E.pre = ctx.createGain();
+  E.lp = ctx.createBiquadFilter(); E.lp.type = 'lowpass'; E.lp.frequency.value = 19000; E.lp.Q.value = 0.4;
+  E.comp = ctx.createDynamicsCompressor();
+  E.comp.threshold.value = -8; E.comp.knee.value = 8; E.comp.ratio.value = 3; E.comp.attack.value = 0.01; E.comp.release.value = 0.3;
+  E.master = ctx.createGain(); E.master.gain.value = 0.0001;
+  E.verb = ctx.createConvolver(); E.verb.buffer = makeIR(ctx, 3.6);
+  E.send = ctx.createGain(); E.send.gain.value = 0.08;
+  E.pre.connect(E.lp); E.lp.connect(E.comp); E.lp.connect(E.send); E.send.connect(E.verb); E.verb.connect(E.comp);
+  E.comp.connect(E.master); E.master.connect(ctx.destination);
+  for (const l of LAYERS){
+    const inp = ctx.createGain(), out = ctx.createGain(), an = ctx.createAnalyser();
+    an.fftSize = 512; an.smoothingTimeConstant = 0;
+    inp.connect(out); out.connect(E.pre); out.connect(an);
+    out.gain.value = JUNGLE.has(l) ? 1 : UI.music;
+    E.bus[l] = {inp, out, an, buf:new Float32Array(512), level:0, peak:0};
+  }
+  E.stBus = ctx.createGain(); E.stBus.connect(E.pre);
+}
+
+// ------------------------------------------------------------------ conductor
+function chooseSection(){
+  if (!UI.follow) return UI.pinned;
+  const cur = E.inst ? E.inst.sec : 'A';
+  const sc = {A:.45, B:P.water, C:P.openness, D:P.mystery, E:P.intensity};
+  sc[cur] += .12;
+  return argmax(sc);
+}
+function dirStep(kind){
+  const I = P.intensity, M = P.mystery;
+  const maxL = Math.max(1, Math.min(4, Math.round(2.6 + 1.8 * I - 1.3 * M)));
+  if (UI.mode !== 'breathe'){ Dir.level = {sparse:1, medium:2, full:4}[UI.mode]; return; }
+  if (kind === 'new'){ Dir.level = Math.min(Math.max(Dir.level, 1), 2); Dir.dir = 'up'; return; }
+  if (Dir.dir === 'up'){
+    Dir.level = Math.min(maxL, Dir.level + (I > .75 ? 2 : 1));
+    if (Dir.level >= maxL){ Dir.dir = 'hold'; Dir.hold = 1 + (Math.random() < .5 ? 1 : 0); }
+  } else if (Dir.dir === 'hold'){
+    if (--Dir.hold <= 0) Dir.dir = 'down';
+  } else {
+    Dir.level = (I > .7 ? 1 : 0) + (Math.random() < .35 ? 1 : 0);
+    Dir.dir = 'up'; Dir.variant ^= 1;
+  }
+  Dir.level = Math.min(Dir.level, maxL);
+}
+function musicGain(s){
+  const I = P.intensity, O = P.openness, W = P.water, M = P.mystery;
+  const m = {drums:(.5 + .7 * I) * (1 - .45 * O) * (1 - .6 * M), shaker:(.6 + .5 * I) * (1 - .4 * O) * (1 - .4 * M),
+    marimba:(.45 + .7 * I) * (1 - .3 * O) * (1 - .5 * M), bass:.75 + .3 * I, woods:(.8 + .2 * M) * (1 - .2 * I),
+    keys:.8 + .2 * O, pad:.7 + .4 * O + .2 * W, kalimba:.7 + .4 * W}[s];
+  return clamp(m == null ? 1 : m, 0, 1.2);
+}
+function takeFor(sec, pass){ return TAKES[(E.takeBase[sec] + pass) % 4]; }
+function arrange(sec, pass){
+  const I = P.intensity, O = P.openness, W = P.water, M = P.mystery, t = {};
+  t[takeFor(sec, pass)] = .92 + .15 * M;
+  t.water = clamp(WATER_BASE[sec] * (.35 + .9 * W), 0, 1.25);
+  t.wildlife = clamp(.55 + .35 * I + .25 * M, 0, 1.2);
+  t.birds = sec === 'D' ? .75 : .85 + .15 * O;
+  const L = UI.music > 0.001 ? Dir.level : 0;
+  const groups = ORDER[sec][Dir.variant];
+  for (let i = 0; i < L; i++) for (const s of groups[i]) if (has(sec, s)) t[s] = musicGain(s);
+  for (const l of LAYERS){
+    const f = UI.force[l];
+    const key = l === 'amb' ? takeFor(sec, pass) : l;
+    if (!has(sec, key)) continue;
+    if (f === 'on') t[key] = Math.max(t[key] || 0, .9);
+    if (f === 'off') t[key] = 0;
+  }
+  return t;
+}
+function leadin(sec, stem, k){
+  const li = META.leadin[sec] && META.leadin[sec][stem];
+  return li ? li[k] * BEAT : 0;
+}
+
+function newInst(sec, start){ return {sec, start, stems:{}, arrived:start}; }
+function startSrc(inst, key, buf, ts){
+  const ctx = E.ctx;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+  const g = ctx.createGain(); g.gain.value = 0;
+  src.connect(g); g.connect(E.bus[base(key)].inp);
+  const off = (((ts - inst.start) % LOOP) + LOOP) % LOOP;
+  src.start(ts, off);
+  const st = {src, g, val:0, idleAt:Infinity};
+  inst.stems[key] = st;
+  return st;
+}
+function ramp(param, from, to, t0, dur, cos){
+  param.cancelScheduledValues(t0);
+  param.setValueAtTime(from, t0);
+  if (cos && dur > .3){
+    const steps = 6;
+    for (let i = 1; i <= steps; i++){
+      const x = i / steps, y = .5 - .5 * Math.cos(Math.PI * x);
+      param.linearRampToValueAtTime(from + (to - from) * y, t0 + dur * x);
+    }
+  } else param.linearRampToValueAtTime(to, t0 + Math.max(dur, .005));
+}
+function playTail(buf, stem, t, gain){
+  if (!buf || gain <= 0.001) return;
+  const s = E.ctx.createBufferSource(); s.buffer = buf;
+  const g = E.ctx.createGain(); g.gain.value = gain;
+  s.connect(g); g.connect(E.bus[stem].inp); s.start(t);
+}
+function playStinger(name, tb, gain){
+  if (!E.stingers || !E.stingers[name]) return;
+  const t0 = tb - BAR;
+  if (t0 < E.ctx.currentTime + .02) return;
+  const s = E.ctx.createBufferSource(); s.buffer = E.stingers[name];
+  const g = E.ctx.createGain(); g.gain.value = gain;
+  s.connect(g); g.connect(E.stBus); s.start(t0);
+  if (name === 'shower') Scene.rainAt(tb - .6, tb + 5);
+  if (name === 'flock') Scene.flockAt(tb);
+}
+
+// apply one layer's target at boundary tb (phrase index k; k = -1 for a bar-level forced change)
+function applyStem(inst, key, tgt, tb, k){
+  const b = base(key);
+  let st = inst.stems[key];
+  const cur = st ? st.val : 0;
+  if (Math.abs(tgt - cur) < .01) return true;
+  const now = E.ctx.currentTime;
+  if (tgt > cur){
+    const li = k >= 0 ? leadin(inst.sec, b, k) : 0;
+    let ts = tb;
+    if (!st){
+      const buf = E.ready.get(inst.sec + '_' + key);
+      if (!buf) return false;
+      ts = Math.max(now + .03, li ? tb - li - BEAT * .05 : tb);
+      st = startSrc(inst, key, buf, ts);
+    } else if (li) ts = Math.max(now + .03, tb - li - BEAT * .05);
+    const dur = BEDS.has(b) ? XF : (b === 'pad' ? 1.2 : .02);
+    ramp(st.g.gain, cur, tgt, ts, dur, dur > .5);
+    st.val = tgt; st.idleAt = Infinity;
+    return true;
+  }
+  // exit
+  if (HARMONIC.has(b) && (k === 1 || k === 3) && UI.force[b] !== 'off') return true;   // harmony leaves on 8-bar lines only
+  if (BEDS.has(b)){
+    ramp(st.g.gain, cur, tgt, tb, XF, true);
+  } else {
+    const li = k >= 0 ? leadin(inst.sec, b, k) : 0;
+    const tails = E.tready.get(inst.sec + '_' + key);
+    if ((k === 0 || k === 2) && !li && tails){
+      ramp(st.g.gain, cur, tgt, tb, .025);
+      playTail(k === 0 ? tails.t16 : tails.t8, b, tb, cur - tgt);
+    } else {
+      const te = li ? tb - li : tb;
+      ramp(st.g.gain, cur, tgt, Math.max(now + .02, li ? te - .15 : te), .15);
+    }
+  }
+  st.val = tgt;
+  if (tgt <= .001) st.idleAt = tb + (BEDS.has(b) ? XF + .5 : .5);
+  return true;
+}
+
+function laneFor(sec, start){
+  const key = sec + '@' + start.toFixed(3);
+  let L = E.lanes.get(key);
+  if (!L){
+    L = {sec, start, v:{}, q:new Uint8Array(16)};
+    for (const l of LAYERS) L.v[l] = new Float32Array(16);
+    E.lanes.set(key, L);
+    if (E.lanes.size > 8) E.lanes.delete(E.lanes.keys().next().value);
+  }
+  return L;
+}
+function levelOf(inst, l){ let v = 0; for (const key in inst.stems) if (base(key) === l) v = Math.max(v, inst.stems[key].val); return v; }
+function laneWrite(inst, n, fromBar){
+  const pass = Math.floor(n / 4), k = ((n % 4) + 4) % 4;
+  const L = laneFor(inst.sec, inst.start + pass * LOOP);
+  const b0 = fromBar != null ? fromBar : k * 4;
+  for (const l of LAYERS){ const v = levelOf(inst, l); for (let b = b0; b < k * 4 + 4; b++){ L.v[l][b] = v; L.q[b] = 1; } }
+}
+
+async function planBoundary(tb){
+  E.planning = true;
+  try {
+    const inst = E.inst;
+    const n = Math.round((tb - inst.start) / PHRASE);
+    const k = ((n % 4) + 4) % 4;
+    const pass = Math.floor(n / 4);
+    let target = chooseSection();
+    const eligible = (k === 0 || k === 2) && (tb - inst.arrived) >= 8 * BAR - .01;
+    let change = target !== inst.sec && eligible;
+    if (target !== inst.sec){
+      prefetchSection(target);
+      const need = [takeFor(target, 0), 'water', 'wildlife', 'birds'].map(s => target + '_' + s);
+      if (!need.every(kk => E.ready.has(kk))){ need.forEach(loopBuf); change = false; }
+    }
+    if (change){
+      dirStep('new');
+      E.takeBase[target] = E.visits[target];
+      const t = arrange(target, 0);
+      const keys = Object.keys(t).filter(kk => t[kk] > 0).map(kk => target + '_' + kk);
+      await Promise.race([Promise.all(keys.map(loopBuf).concat(keys.filter(kk => !BEDS.has(base(kk.slice(2)))).map(tailBuf))), wait(1400)]);
+      if (E.ctx.currentTime > tb - .12 || !E.playing) return;
+      sectionChange(inst, target, tb, k, t);
+    } else {
+      dirStep('same');
+      const t = arrange(inst.sec, pass);
+      const keys = Object.keys(t).filter(kk => t[kk] > 0 && !inst.stems[kk]).map(kk => inst.sec + '_' + kk);
+      await Promise.race([Promise.all(keys.map(loopBuf)), wait(1400)]);
+      if (E.ctx.currentTime > tb - .08 || !E.playing) return;
+      const all = new Set([...Object.keys(t), ...Object.keys(inst.stems)]);
+      const before = Object.fromEntries(Object.entries(inst.stems).map(([kk, v]) => [kk, v.val]));
+      for (const key of all) applyStem(inst, key, t[key] || 0, tb, k);
+      laneWrite(inst, n);
+      maybeSting(inst, before, tb, k);
+      // warm up what the next phrases are likely to need
+      loopBuf(inst.sec + '_' + takeFor(inst.sec, pass + 1));
+      ORDER[inst.sec][Dir.variant].flat().forEach(s => { if (has(inst.sec, s)) loopBuf(inst.sec + '_' + s); });
+      for (const key in inst.stems) if (!BEDS.has(base(key))) tailBuf(inst.sec + '_' + key);
+    }
+  } catch (err) {
+    console.warn(err);
+  } finally {
+    E.plannedUntil = tb;
+    E.planning = false;
+  }
+}
+function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function sectionChange(old, sec, tb, k, t){
+  // old area: cut on the downbeat and ring out through its tails; beds crossfade
+  for (const [key, st] of Object.entries(old.stems)){
+    const b = base(key);
+    if (st.val <= .001){ try { st.src.stop(tb); } catch (e) {} continue; }
+    if (BEDS.has(b)){ ramp(st.g.gain, st.val, 0, tb, XF, true); st.src.stop(tb + XF + .2); continue; }
+    const tails = E.tready.get(old.sec + '_' + key);
+    if (tails){ ramp(st.g.gain, st.val, 0, tb, .025); st.src.stop(tb + .1); playTail(k === 0 ? tails.t16 : tails.t8, b, tb, st.val); }
+    else { ramp(st.g.gain, st.val, 0, tb, .9); st.src.stop(tb + 1); }
+  }
+  const inst = newInst(sec, tb);
+  old.prev = null;
+  inst.prev = old;
+  E.inst = inst;
+  E.visits[sec] = (E.visits[sec] + 1) % 4;
+  for (const key in t){
+    if (t[key] <= 0) continue;
+    const buf = E.ready.get(sec + '_' + key);
+    if (!buf) continue;
+    const st = startSrc(inst, key, buf, tb);
+    const b = base(key);
+    // clean the first pass of this loop's own wrapped tail (phantom cancellation)
+    const tails = E.tready.get(sec + '_' + key);
+    if (tails && !BEDS.has(b)){
+      const s = E.ctx.createBufferSource(); s.buffer = tails.t16;
+      const inv = E.ctx.createGain(); inv.gain.value = -1;
+      s.connect(inv); inv.connect(st.g); s.start(tb);
+    }
+    const dur = BEDS.has(b) ? XF : (b === 'pad' ? 1.2 : .02);
+    ramp(st.g.gain, 0, t[key], tb, dur, dur > .5);
+    st.val = t[key];
+  }
+  laneWrite(inst, 0);
+  const sting = {A:['flock', 1], B:['shower', .8], C:['gust', 1], D:['far_cry', .9], E:['woodpecker_roll', 1]}[sec];
+  playStinger(sting[0], tb, sting[1]);
+  if (sec === 'C' && P.openness > .6) playStinger('flock', tb, .7);
+  if (sec === 'E' && Dir.level >= 2 && UI.music > .3) playStinger('fill_hands', tb, .8 * UI.music);
+  E.lastSting = tb;
+  Scene.setArea(sec, tb);
+  setTimeout(() => AREAS.forEach(a => { if (a !== sec && a !== old.sec) releaseSection(a); }), 12000);
+}
+function maybeSting(inst, before, tb, k){
+  if (tb - E.lastSting < 8 * BAR - .1 || !(k === 0 || k === 2)) return;
+  const mus = s => Object.entries(s).filter(([kk]) => !JUNGLE.has(base(kk))).reduce((a, [, v]) => a + (typeof v === 'number' ? v : v.val), 0);
+  const b0 = mus(before), b1 = mus(inst.stems);
+  if (b0 - b1 > 1.5){ playStinger(Math.random() < .5 ? 'gust' : 'far_cry', tb, .8); E.lastSting = tb; }
+  else if (b1 - b0 > 1.5 && UI.music > .3){ playStinger(Math.random() < .5 ? 'fill_logs' : 'woodpecker_roll', tb, .8 * UI.music); E.lastSting = tb; }
+}
+
+function applyForces(tbar){
+  const inst = E.inst; if (!inst) return;
+  const n = Math.floor((tbar - inst.start) / PHRASE + 1e-6), pass = Math.floor(n / 4);
+  const t = arrange(inst.sec, pass);
+  for (const l of LAYERS){
+    const key = l === 'amb' ? takeFor(inst.sec, pass) : l;
+    if (!has(inst.sec, key)) continue;
+    const f = UI.force[l];
+    if (f === 'auto') continue;
+    const want = t[key] || 0;
+    if (f === 'on' && !E.ready.has(inst.sec + '_' + key)){ loopBuf(inst.sec + '_' + key); E.forceDirty = true; continue; }
+    applyStem(inst, key, want, tbar, -1);
+  }
+  const bar = Math.floor(((tbar - inst.start) % LOOP) / BAR + 1e-6);
+  laneWrite(inst, n, bar);
+}
+
+function tick(){
+  if (!E.playing || !E.inst) return;
+  const ctx = E.ctx, now = ctx.currentTime, inst = E.inst;
+  // next phrase boundary after what is already planned
+  const nNext = Math.floor((Math.max(E.plannedUntil, now) - inst.start) / PHRASE + 1e-6) + 1;
+  const tb = inst.start + nNext * PHRASE;
+  if (!E.planning && tb - now < BAR + .7) planBoundary(tb);
+  // forced layers: next bar
+  if (E.forceDirty){
+    const nb = inst.start + (Math.floor((now - inst.start) / BAR) + 1) * BAR;
+    if (nb - now < .3 && nb - now > .05 && Math.abs(nb - tb) > .2){ E.forceDirty = false; applyForces(nb); }
+    else if (Math.abs(nb - tb) <= .2) E.forceDirty = false;
+  }
+  // stop idle sources
+  for (const [key, st] of Object.entries(inst.stems)){
+    if (st.val <= .001 && now > st.idleAt){ try { st.src.stop(); } catch (e) {} st.src.disconnect(); delete inst.stems[key]; }
+  }
+  // master effects follow the environment
+  const cutoff = 19000 - 10500 * Math.pow(P.mystery, 1.4);
+  E.lp.frequency.setTargetAtTime(cutoff, now, .8);
+  E.send.gain.setTargetAtTime(.04 + .22 * P.openness + .12 * P.water, now, .8);
+}
+
+async function start(){
+  if (E.starting) return;
+  E.starting = true;
+  try {
+    if (!E.ctx) initAudio();
+    await E.ctx.resume();
+    const sec = chooseSection();
+    setStatus('Loading ' + META.sections[sec].name + '…');
+    Dir.level = UI.mode === 'breathe' ? 1 : {sparse:1, medium:2, full:4}[UI.mode]; Dir.dir = 'up';
+    E.takeBase[sec] = E.visits[sec]; E.visits[sec] = (E.visits[sec] + 1) % 4;
+    E.lanes.clear();
+    const t = arrange(sec, 0);
+    const keys = Object.keys(t).filter(k => t[k] > 0).map(k => sec + '_' + k);
+    let done = 0;
+    const all = keys.map(k => loopBuf(k).then(v => { done++; setStatus('Loading ' + META.sections[sec].name + '… ' + Math.round(100 * done / keys.length) + '%'); return v; }));
+    const tails = keys.filter(k => !BEDS.has(base(k.slice(2)))).map(tailBuf);
+    const stP = file('stingers').then(ab => decode(ab.slice(0))).then(b => {
+      const o = {}; META.stingers.names.forEach((nm, i) => o[nm] = extract(b, META.stingers.offsets[i], META.stingers.length)); E.stingers = o;
+    }).catch(e => console.warn(e));
+    await Promise.all(all.concat(tails));
+    const t0 = E.ctx.currentTime + .25;
+    const inst = newInst(sec, t0); inst.arrived = t0 - 8 * BAR;
+    E.inst = inst; E.playing = true; E.plannedUntil = t0;
+    for (const key in t){
+      if (t[key] <= 0) continue;
+      const buf = E.ready.get(sec + '_' + key); if (!buf) continue;
+      const st = startSrc(inst, key, buf, t0);
+      const tl = E.tready.get(sec + '_' + key);
+      if (tl && !BEDS.has(base(key))){
+        const s = E.ctx.createBufferSource(); s.buffer = tl.t16; const inv = E.ctx.createGain(); inv.gain.value = -1;
+        s.connect(inv); inv.connect(st.g); s.start(t0);
+      }
+      ramp(st.g.gain, 0, t[key], t0, BEDS.has(base(key)) ? 2.5 : .3, true);
+      st.val = t[key];
+    }
+    laneWrite(inst, 0);
+    Scene.setArea(sec, t0, true);
+    E.master.gain.cancelScheduledValues(t0 - .2);
+    E.master.gain.setValueAtTime(.0001, t0 - .2);
+    E.master.gain.linearRampToValueAtTime(1, t0 + .4);
+    setPlaying(true);
+    setStatus('Playing · stems decode as they are needed');
+    stP.then(() => {});
+    // background: fetch the other areas' files so area changes are quick
+    (async () => { for (const a of AREAS) if (a !== sec) { try { await prefetchSection(a); } catch (e) {} } })();
+  } catch (err) {
+    console.warn(err);
+    setStatus('Audio failed to load: ' + (err && err.message ? err.message : err) + '. Try reloading the page.');
+    E.playing = false; setPlaying(false);
+  } finally { E.starting = false; }
+}
+function stop(){
+  if (!E.ctx) return;
+  const now = E.ctx.currentTime;
+  E.master.gain.cancelScheduledValues(now);
+  E.master.gain.setValueAtTime(E.master.gain.value, now);
+  E.master.gain.linearRampToValueAtTime(.0001, now + .35);
+  const inst = E.inst;
+  E.playing = false; E.inst = null; E.plannedUntil = 0;
+  setTimeout(() => {
+    if (inst) for (const st of Object.values(inst.stems)){ try { st.src.stop(); st.src.disconnect(); } catch (e) {} }
+  }, 420);
+  setPlaying(false); setStatus('Paused · press play to start a fresh pass');
+}
+function setPlaying(on){
+  qs('#playLabel').textContent = on ? 'Pause' : 'Play';
+  qs('#play').setAttribute('aria-label', on ? 'Pause' : 'Play');
+  qs('#playIcon').setAttribute('d', on ? 'M5 4h3.5v12H5zM11.5 4H15v12h-3.5z' : 'M6 4l10 6-10 6z');
+}
+
+// ------------------------------------------------------------------ UI wiring
+const sliders = [['p-int', 'o-int', 'intensity'], ['p-open', 'o-open', 'openness'], ['p-water', 'o-water', 'water'], ['p-myst', 'o-myst', 'mystery']];
+function paintSlider(el){ el.style.setProperty('--v', el.value + '%'); }
+sliders.forEach(([id, oid, key]) => {
+  const el = qs('#' + id);
+  el.addEventListener('input', () => { P[key] = el.value / 100; qs('#' + oid).textContent = P[key].toFixed(2); paintSlider(el); if (UI.explore && !syncing) setExplore(false); });
+  paintSlider(el);
+});
+const musicEl = qs('#p-music');
+musicEl.addEventListener('input', () => {
+  UI.music = musicEl.value / 100; qs('#o-music').textContent = Math.round(UI.music * 100) + '%'; paintSlider(musicEl);
+  if (E.ctx) for (const l of LAYERS) if (!JUNGLE.has(l)) E.bus[l].out.gain.setTargetAtTime(UI.music, E.ctx.currentTime, .25);
+});
+paintSlider(musicEl);
+let syncing = false;
+function setParams(arr){
+  syncing = true;
+  sliders.forEach(([id, oid, key], i) => { const el = qs('#' + id); el.value = Math.round(arr[i] * 100); el.dispatchEvent(new Event('input')); });
+  syncing = false;
+}
+
+qs('#play').addEventListener('click', () => { if (E.playing) stop(); else start(); });
+qs('#modes').addEventListener('click', e => {
+  const b = e.target.closest('[data-mode]'); if (!b) return;
+  UI.mode = b.dataset.mode;
+  [...qs('#modes').children].forEach(c => c.setAttribute('aria-pressed', c === b ? 'true' : 'false'));
+  if (UI.mode !== 'breathe') Dir.level = {sparse:1, medium:2, full:4}[UI.mode];
+});
+function buildAreaChips(){
+  const box = qs('#areas');
+  AREAS.forEach(a => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.area = a; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = '<span class="dot"></span>' + META.sections[a].name; box.appendChild(b);
+  });
+  box.addEventListener('click', e => {
+    const b = e.target.closest('[data-area]'); if (!b) return;
+    if (b.dataset.area === 'auto'){ UI.follow = true; } else { UI.follow = false; UI.pinned = b.dataset.area; }
+    [...box.children].forEach(c => c.setAttribute('aria-pressed', c === b ? 'true' : 'false'));
+  });
+}
+let exploreTimer = null;
+function setExplore(on){
+  UI.explore = on;
+  qs('#explore').setAttribute('aria-checked', on ? 'true' : 'false');
+  clearTimeout(exploreTimer);
+  if (on){
+    if (!UI.follow){ UI.follow = true; [...qs('#areas').children].forEach(c => c.setAttribute('aria-pressed', c.dataset.area === 'auto' ? 'true' : 'false')); }
+    walk();
+  } else qs('#place').textContent = 'Moves the sliders like a player walking';
+}
+function walk(){
+  if (!UI.explore) return;
+  const cur = [P.intensity, P.openness, P.water, P.mystery];
+  let pl; do { pl = PLACES[Math.floor(Math.random() * PLACES.length)]; } while (PLACES.length > 1 && pl.name === walk.last);
+  walk.last = pl.name;
+  qs('#place').textContent = 'Walking to ' + pl.name;
+  const t0 = performance.now(), dur = 7000;
+  const step = () => {
+    if (!UI.explore) return;
+    const x = clamp((performance.now() - t0) / dur), e = .5 - .5 * Math.cos(Math.PI * x);
+    setParams(cur.map((v, i) => lerp(v, pl.p[i], e)));
+    if (x < 1) requestAnimationFrame(step); else qs('#place').textContent = 'At ' + pl.name;
+  };
+  step();
+  exploreTimer = setTimeout(walk, 26000 + Math.random() * 18000);
+}
+qs('#explore').addEventListener('click', () => setExplore(!UI.explore));
+
+// layer board
+function buildLanes(){
+  const root = qs('#lanes'); root.innerHTML = '';
+  const mkLane = (cls) => { const lane = document.createElement('div'); lane.className = 'lane ' + (cls || '');
+    for (let p = 0; p < 4; p++){ const ph = document.createElement('div'); ph.className = 'phr'; for (let b = 0; b < 4; b++){ const c = document.createElement('div'); c.className = 'cell'; c.appendChild(document.createElement('i')); ph.appendChild(c); } lane.appendChild(ph); }
+    return lane; };
+  const head = document.createElement('div'); head.className = 'lrow';
+  head.innerHTML = '<div class="lname" style="color:var(--ink-3);font-size:12px">Bar</div><div></div><div></div>';
+  const nums = mkLane('barnums'); [...nums.querySelectorAll('.cell')].forEach((c, i) => c.textContent = i + 1); head.appendChild(nums); root.appendChild(head);
+  const ch = document.createElement('div'); ch.className = 'lrow';
+  ch.innerHTML = '<div class="lname" style="color:var(--ink-3);font-size:12px">Harmony</div><div></div><div></div>';
+  const chl = mkLane('chordrow'); ch.appendChild(chl); root.appendChild(ch);
+  LAYERS.forEach((l, i) => {
+    const r = document.createElement('div'); r.className = 'lrow' + (l === 'woods' || i === 0 ? ' sep' : ''); r.dataset.layer = l;
+    const nm = document.createElement('div'); nm.className = 'lname'; nm.innerHTML = LABEL[l] + (i === 0 ? '<em>jungle</em>' : l === 'woods' ? '<em>music bed</em>' : '');
+    const fb = document.createElement('button'); fb.type = 'button'; fb.className = 'force'; fb.dataset.f = 'auto'; fb.textContent = 'auto';
+    fb.setAttribute('aria-label', LABEL[l] + ': automatic');
+    fb.addEventListener('click', () => {
+      const nx = {auto:'on', on:'off', off:'auto'}[UI.force[l]]; UI.force[l] = nx; fb.dataset.f = nx; fb.textContent = nx;
+      fb.setAttribute('aria-label', LABEL[l] + ': ' + (nx === 'auto' ? 'automatic' : nx === 'on' ? 'forced on' : 'forced off'));
+      E.forceDirty = true;
+    });
+    const mt = document.createElement('div'); mt.className = 'meter'; mt.appendChild(document.createElement('b'));
+    r.append(nm, fb, mt, mkLane()); root.appendChild(r);
+  });
+}
+function paintChords(sec){
+  const cells = qs('#lanes').querySelectorAll('.chordrow .cell');
+  META.sections[sec].chords.forEach((c, i) => { if (cells[i]) { cells[i].textContent = c; cells[i].title = 'Bar ' + (i + 1) + ': ' + c; } });
+  document.querySelectorAll('.lrow[data-layer]').forEach(r => r.classList.toggle('absent', !has(sec, r.dataset.layer === 'amb' ? 'amb' : r.dataset.layer)));
+}
+function buildAreaTable(){
+  const tb = qs('#areaTable');
+  AREAS.forEach(a => {
+    const s = META.sections[a], tr = document.createElement('tr');
+    tr.innerHTML = '<td><b>' + s.name + '</b><br><span style="color:var(--ink-3)">' + s.mood + '</span></td><td>' + AREA_TEXT[a][0] + '</td><td>' + AREA_TEXT[a][1] + '</td><td class="chords">' + s.chords.join(' · ') + '</td>';
+    tb.appendChild(tr);
+  });
+}
+
+// per-frame UI
+let lastUiSec = null, lastBarShown = -1;
+function uiFrame(){
+  let inst = E.inst;
+  if (inst && inst.prev && E.ctx && E.ctx.currentTime < inst.start) inst = inst.prev;
+  let sec = inst ? inst.sec : chooseSection();
+  let pos = 0;
+  if (inst && E.ctx){ pos = Math.max(0, E.ctx.currentTime - inst.start) % LOOP; }
+  const bar = Math.floor(pos / BAR), beat = Math.floor((pos % BAR) / BEAT);
+  if (sec !== lastUiSec){
+    lastUiSec = sec; paintChords(sec);
+    qs('#hudArea').textContent = META.sections[sec].name; qs('#hudMood').textContent = META.sections[sec].mood;
+    document.querySelectorAll('#areas .chip').forEach(c => c.classList.toggle('here', c.dataset.area === sec));
+  }
+  qs('#hudClock').textContent = 'Bar ' + String(bar + 1).padStart(2, '0') + ' · ' + (beat + 1);
+  qs('#hudPhrase').textContent = 'Phrase ' + (Math.floor(bar / 4) + 1) + ' of 4';
+  qs('#hudChord').textContent = UI.music > .001 && Dir.level > 0 ? 'Harmony · ' + META.sections[sec].chords[bar] : 'Pure jungle';
+  // pending area
+  const want = chooseSection();
+  let pend = '';
+  if (inst && want !== inst.sec){
+    const n = Math.floor((E.ctx.currentTime - inst.start) / PHRASE) + 1;
+    let tb = null;
+    for (let m = n; m < n + 12; m++){ const kk = ((m % 4) + 4) % 4; const t = inst.start + m * PHRASE; if ((kk === 0 || kk === 2) && t - inst.arrived >= 8 * BAR - .01){ tb = t; break; } }
+    const bars = tb ? Math.max(0, Math.round((tb - E.ctx.currentTime) / BAR)) : '';
+    pend = 'Heading to <b>' + META.sections[want].name + '</b> · ' + (bars === 0 ? 'now' : 'in ' + bars + (bars === 1 ? ' bar' : ' bars'));
+    qs('#hudNext').textContent = META.sections[want].name + ' in ' + bars + ' bars';
+  } else {
+    qs('#hudNext').textContent = inst ? (Dir.level === 0 || UI.music <= .001 ? 'Only the jungle' : 'Music bed · level ' + Dir.level + ' of 4') : 'Press play';
+  }
+  qs('#pending').innerHTML = pend;
+  // lanes
+  const rows = document.querySelectorAll('.lrow[data-layer]');
+  const Ln = inst ? laneFor(inst.sec, inst.start + Math.floor(Math.max(0, E.ctx.currentTime - inst.start) / LOOP) * LOOP) : null;
+  if (Ln){
+    rows.forEach(r => {
+      const l = r.dataset.layer, cells = r.querySelectorAll('.lane .cell'), vals = Ln.v[l];
+      cells.forEach((c, i) => {
+        const v = vals[i]; c.firstChild.style.opacity = v > 0 ? (.25 + .75 * clamp(v)).toFixed(2) : 0;
+        c.classList.toggle('q', i > bar && Ln.q[i] === 1 && Math.floor(i / 4) !== Math.floor(bar / 4));
+        c.classList.toggle('now', i === bar);
+      });
+    });
+  }
+  if (bar !== lastBarShown){ lastBarShown = bar; document.querySelectorAll('.chordrow .cell').forEach((c, i) => c.classList.toggle('now', i === bar && !!inst)); }
+  // meters + bird spawns from the actual audio
+  if (E.ctx && E.playing){
+    for (const l of LAYERS){
+      const b = E.bus[l]; b.an.getFloatTimeDomainData(b.buf);
+      let s = 0; for (let i = 0; i < b.buf.length; i++) s += b.buf[i] * b.buf[i];
+      const rms = Math.sqrt(s / b.buf.length), db = 20 * Math.log10(rms + 1e-9);
+      const lv = clamp((db + 60) / 48);
+      b.level = lv;
+      const el = document.querySelector('.lrow[data-layer="' + l + '"] .meter b'); if (el) el.style.width = (lv * 100).toFixed(1) + '%';
+      if ((l === 'birds' || l === 'amb' || l === 'wildlife') && lv > b.peak + .12 && lv > .45) Scene.bird(l === 'birds');
+      b.peak = Math.max(lv, b.peak * .92);
+    }
+  }
+}
+
+// ------------------------------------------------------------------ pixel scene
+const Scene = (() => {
+  const W = 320, H = 140;
+  const cv = qs('#scene'), g = cv.getContext('2d');
+  const gc = qs('#glow'), gg = gc.getContext('2d');
+  const hx = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const PAL = {
+    A:{skyT:'#7EC6DC', skyB:'#D9F1E6', far:'#94C2B8', mid:'#5A9A82', cD:'#1D4838', cM:'#2E6A4B', cL:'#62A057', trunk:'#3B2E24', ground:'#27462C', w1:'#35AFA8', w2:'#A2E6DA', light:'#FFE7A3', fog:'#E2F1E8', stone:'#7A7D72', moss:'#5E8A4E'},
+    B:{skyT:'#79BFD6', skyB:'#D0EDEF', far:'#86BBC0', mid:'#4B928C', cD:'#16433C', cM:'#22655A', cL:'#4E9A7E', trunk:'#33302A', ground:'#1F443A', w1:'#27ACAE', w2:'#AEF0EC', light:'#E6F6FF', fog:'#DCF1F1', stone:'#727A76', moss:'#4F8A62'},
+    C:{skyT:'#8FBFE3', skyB:'#F7DFAE', far:'#ADA7C4', mid:'#78998F', cD:'#26483A', cM:'#3B6B4A', cL:'#88A85A', trunk:'#3C2F25', ground:'#2E4A30', w1:'#57B3C4', w2:'#D2F1EE', light:'#FFD98A', fog:'#F4E6CC', stone:'#8A8272', moss:'#6A8A4E'},
+    D:{skyT:'#343F60', skyB:'#877B9E', far:'#56607C', mid:'#394A56', cD:'#12211D', cM:'#1F352C', cL:'#3C5B43', trunk:'#221C19', ground:'#182820', w1:'#3A7888', w2:'#8FD6D6', light:'#BDF6DA', fog:'#6C798C', stone:'#676B63', moss:'#4E7A4A'},
+    E:{skyT:'#68BCE4', skyB:'#CBEFF2', far:'#8BC4BF', mid:'#4B9870', cD:'#1A4430', cM:'#2E7345', cL:'#6CAA46', trunk:'#3E2F22', ground:'#29492A', w1:'#38B6AE', w2:'#A9EDE2', light:'#FFF0B5', fog:'#E6F5EA', stone:'#7B7C70', moss:'#5E8F48'},
+  };
+  const RGB = {}; for (const a in PAL){ RGB[a] = {}; for (const k in PAL[a]) RGB[a][k] = hx(PAL[a][k]); }
+  let area = 'A', cur = JSON.parse(JSON.stringify(RGB.A));
+  let switchAt = 0, pendingArea = 'A';
+  function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const rnd = mulberry(20260926);
+  const vn = (() => { const p = []; for (let i = 0; i < 512; i++) p.push(rnd()); return x => { const i = Math.floor(x), f = x - i, a = p[i & 511], b = p[(i + 1) & 511]; const u = f * f * (3 - 2 * f); return a + (b - a) * u; }; })();
+  const WF = 1280, WM = 960;
+  const farH = new Float32Array(WF), midH = new Float32Array(WF);
+  for (let x = 0; x < WF; x++){
+    const xx = x / WF * 32;
+    farH[x] = 44 + 18 * vn(xx * 1.1) + 9 * vn(xx * 3.3 + 50) + 3 * vn(xx * 9 + 90);
+    midH[x] = 70 + 14 * vn(xx * 1.7 + 20) + 6 * vn(xx * 5.1 + 70);
+  }
+  const trees = [];
+  for (let i = 0; i < 13; i++) trees.push({x:i * (WM / 13) + rnd() * 30, h:62 + rnd() * 34, w:4 + Math.floor(rnd() * 4), r:13 + rnd() * 9, seed:rnd() * 100});
+  const back = [];
+  for (let i = 0; i < 22; i++) back.push({x:i * (WM / 22) + rnd() * 20, h:34 + rnd() * 24, r:7 + rnd() * 6});
+  const pillars = [{x:70, h:44, w:12}, {x:118, h:36, w:11}, {x:166, h:50, w:13}, {x:520, h:40, w:12}, {x:566, h:30, w:10}];
+  const birds = [], flies = [];
+  for (let i = 0; i < 26; i++) flies.push({x:rnd() * W, y:60 + rnd() * 60, ph:rnd() * 6.28, sp:.3 + rnd() * .6});
+  let rain = null, flockT = null;
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const img = g.createImageData(W, 100), u32 = new Uint32Array(img.data.buffer);
+  let S = {i:.3, o:.35, w:.3, m:.1};
+  let cam = 0, lastT = performance.now() / 1000;
+  const col = (c, a = 1) => 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')';
+  const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  function rect(c, x, y, w, h){ g.fillStyle = col(c); g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+  function blob(cx, cy, r, cD, cM, cL){
+    cx = Math.round(cx); cy = Math.round(cy); r = Math.round(r);
+    g.fillStyle = col(cD);
+    for (let dy = -r; dy <= r; dy++){ const w = Math.round(Math.sqrt(r * r - dy * dy)); g.fillRect(cx - w, cy + dy, 2 * w + 1, 1); }
+    const r2 = Math.round(r * .68), ox = cx - Math.round(r * .22), oy = cy - Math.round(r * .26);
+    g.fillStyle = col(cM);
+    for (let dy = -r2; dy <= r2; dy++){ const w = Math.round(Math.sqrt(r2 * r2 - dy * dy)); g.fillRect(ox - w, oy + dy, 2 * w + 1, 1); }
+    g.fillStyle = col(cL);
+    const r3 = Math.round(r * .34);
+    for (let dy = -r3; dy <= r3; dy++){ const w = Math.round(Math.sqrt(r3 * r3 - dy * dy)); for (let dx = -w; dx <= w; dx++) if (((dx + dy) & 1) === 0) g.fillRect(ox - Math.round(r * .12) + dx, oy - Math.round(r * .12) + dy, 1, 1); }
+  }
+  function target(){
+    const p = JSON.parse(JSON.stringify(RGB[area]));
+    const k = area === 'D' ? 0 : .45 * S.m;
+    for (const key in p) p[key] = mix(p[key], RGB.D[key], k);
+    p.skyT = mix(p.skyT, [255, 255, 255], .08 * S.o);
+    return p;
+  }
+  function frame(tAudio, beatPos, playing){
+    const tNow = performance.now() / 1000, dt = Math.min(.1, tNow - lastT); lastT = tNow;
+    if (pendingArea !== area && (!playing || tAudio >= switchAt - .3)) area = pendingArea;
+    S.i = lerp(S.i, P.intensity, .04); S.o = lerp(S.o, P.openness, .04); S.w = lerp(S.w, P.water, .04); S.m = lerp(S.m, P.mystery, .04);
+    const tp = target();
+    for (const key in cur) cur[key] = mix(cur[key], tp[key], .035);
+    const t = tAudio;
+    cam += dt * (3 + 14 * S.i);
+    const sway = Math.sin(beatPos / 4 * Math.PI * 2);
+    const waterAmt = clamp(area === 'B' ? .8 + .2 * S.w : S.w * 1.1 - .15);
+    const ruinAmt = clamp(area === 'D' ? 1 : S.m * 1.6 - .5);
+    const bridgeAmt = area === 'E' || S.i > .7 ? 1 : 0;
+    // sky (dithered bands)
+    for (let y = 0; y < 100; y++){
+      const tt = y / 99 * 7, i0 = Math.floor(tt), fr = tt - i0;
+      const cA = mix(cur.skyT, cur.skyB, i0 / 7), cB = mix(cur.skyT, cur.skyB, Math.min(7, i0 + 1) / 7);
+      const pa = (255 << 24) | ((cA[2] | 0) << 16) | ((cA[1] | 0) << 8) | (cA[0] | 0);
+      const pb = (255 << 24) | ((cB[2] | 0) << 16) | ((cB[1] | 0) << 8) | (cB[0] | 0);
+      for (let x = 0; x < W; x++) u32[y * W + x] = (fr * 16 > BAYER[(y & 3) * 4 + (x & 3)]) ? pb : pa;
+    }
+    g.putImageData(img, 0, 0);
+    rect(cur.ground, 0, 100, W, 40);
+    gg.clearRect(0, 0, W, H);
+    // sun / moon
+    const night = area === 'D';
+    const sun = night ? [58, 22] : area === 'C' ? [252, 56] : [246, 20];
+    gg.fillStyle = col(cur.light, .55 + .35 * S.o);
+    gg.beginPath(); gg.arc(sun[0], sun[1], night ? 9 : 14 + 10 * S.o, 0, 6.29); gg.fill();
+    rect(night ? [230, 236, 240] : [255, 247, 214], sun[0] - 3, sun[1] - 3, 6, 6);
+    // far ridge
+    const fc = mix(cur.far, cur.fog, .25 + .2 * S.m);
+    g.fillStyle = col(fc);
+    for (let x = 0; x < W; x++){ const h = farH[Math.floor(x + cam * .15) % WF]; g.fillRect(x, Math.round(h - 12 * S.o), 1, H); }
+    // mid ridge
+    g.fillStyle = col(mix(cur.mid, cur.fog, .15));
+    for (let x = 0; x < W; x++){ const h = midH[Math.floor(x + cam * .3 + 400) % WF]; g.fillRect(x, Math.round(h + 6 * S.o), 1, H); }
+    // back trees
+    for (const b of back){
+      let x = ((b.x - cam * .45) % WM + WM) % WM - 30; if (x > W + 30) continue;
+      const top = 100 - b.h;
+      rect(mix(cur.cD, cur.fog, .45), x + b.r * .5, top, 2, b.h);
+      blob(x + b.r * .5, top, b.r * (1 - .3 * S.o), mix(cur.cD, cur.fog, .42), mix(cur.cM, cur.fog, .42), mix(cur.cL, cur.fog, .4));
+    }
+    // waterfall
+    if (waterAmt > .05){
+      const wx = 212, wy = 34, ww = 18, wh = 70;
+      rect(mix(cur.stone, cur.cD, .45), wx - 8, wy - 6, ww + 16, 8);
+      rect(mix(cur.stone, cur.cD, .3), wx - 6, wy, 6, wh);
+      rect(mix(cur.stone, cur.cD, .3), wx + ww, wy, 6, wh);
+      const wcA = col(cur.w2, waterAmt), wcB = col(mix(cur.w1, cur.w2, .25), waterAmt);
+      g.fillStyle = wcB; g.fillRect(wx, wy, ww, wh);
+      g.fillStyle = wcA;
+      for (let yy = 0; yy < wh; yy++) for (let xx = 0; xx < ww; xx++){
+        const k = (((yy - Math.floor(t * 55) + xx * 7 + (xx >> 2) * 13) % 9) + 9) % 9;
+        if (k < 2) g.fillRect(wx + xx, wy + yy, 1, 1);
+      }
+      gg.fillStyle = col(cur.w2, .5 * waterAmt);
+      for (let i = 0; i < 7; i++){ gg.beginPath(); gg.arc(wx + ww / 2 + Math.sin(t * .7 + i) * 12, wy + wh + 2 - i, 6 + i, 0, 6.29); gg.fill(); }
+    }
+    // ruins
+    if (ruinAmt > .03){
+      for (const pl of pillars){
+        let x = ((pl.x - cam * .6) % WM + WM) % WM - 20; if (x > W + 20) continue;
+        const top = 100 - pl.h * ruinAmt;
+        rect(mix(cur.stone, cur.cD, .35), x, top, pl.w, pl.h * ruinAmt);
+        g.fillStyle = col(mix(cur.stone, cur.cD, .6));
+        for (let yy = Math.ceil(top) + 4; yy < 100; yy += 5) g.fillRect(Math.round(x), yy, pl.w, 1);
+        g.fillStyle = col(cur.moss);
+        for (let i = 0; i < pl.w; i++) if ((i * 7) % 3 !== 0) g.fillRect(Math.round(x) + i, Math.round(top) - (i % 2), 1, 2 + (i % 3));
+        const glowA = .35 + .35 * Math.max(0, Math.sin(beatPos * Math.PI));
+        gg.fillStyle = col(cur.light, glowA * ruinAmt);
+        gg.fillRect(Math.round(x + pl.w / 2 - 1), Math.round(top + 9), 3, 5);
+      }
+    }
+    // canopy trees
+    for (const tr of trees){
+      let x = ((tr.x - cam * .8) % WM + WM) % WM - 40; if (x > W + 40) continue;
+      const top = 104 - tr.h;
+      rect(cur.trunk, x, top, tr.w, tr.h);
+      rect(mix(cur.trunk, cur.light, .18), x + 1, top, 1, tr.h);
+      const s = tr.seed, r = tr.r * (1 - .32 * S.o), dx = sway * (1 + S.i) * .8;
+      blob(x + tr.w / 2 + dx, top, r, cur.cD, cur.cM, cur.cL);
+      blob(x + tr.w / 2 - r * .8 + dx * .7, top + r * .45, r * .7, cur.cD, cur.cM, cur.cL);
+      blob(x + tr.w / 2 + r * .85 + dx * .7, top + r * .35, r * .66, cur.cD, cur.cM, cur.cL);
+      if (s > 50){ g.fillStyle = col(cur.cM); for (let i = 0; i < 16; i++) g.fillRect(Math.round(x + tr.w / 2 + (i % 2 ? 4 : -5) + dx), Math.round(top + r * .5 + i * 1.6), 1, 1); }
+    }
+    // rope bridge
+    if (bridgeAmt){
+      const y0 = 56, x0 = -4, x1 = W + 4;
+      for (let x = x0; x <= x1; x++){
+        const u = (x - x0) / (x1 - x0), y = Math.round(y0 + 12 * Math.sin(Math.PI * u) + Math.sin(t * 1.6) * 1.2 * Math.sin(Math.PI * u));
+        g.fillStyle = '#463424'; g.fillRect(x, y, 1, 1);
+        if (x % 22 === 0) g.fillRect(x, y - 7, 1, 7);
+        if (x % 4 === 0){ g.fillStyle = '#705434'; g.fillRect(x, y + 1, 2, 2); }
+        g.fillStyle = '#58422c'; g.fillRect(x, Math.round(y - 7 + 3 * Math.sin(Math.PI * u)), 1, 1);
+      }
+    }
+    // river
+    if (waterAmt > .1 || area === 'B'){
+      const y0 = Math.round(114 - 8 * waterAmt), wA = clamp(waterAmt + .2);
+      rect(mix(cur.w1, cur.cD, .25), 0, y0, W, H - y0);
+      g.fillStyle = col(cur.w2, .8 * wA);
+      for (let i = 0; i < 46; i++){
+        const x = ((i * 37 + t * (10 + (i % 4) * 5)) % (W + 20)) - 10, y = y0 + 2 + (i * 7) % Math.max(3, (H - y0 - 3));
+        g.fillRect(Math.round(x), y, 3 + (i % 4), 1);
+      }
+      gg.fillStyle = col(cur.w2, .35 * wA);
+      for (let i = 0; i < 8; i++){ const x = (i * 43 + t * 8) % W; gg.fillRect(Math.round(x), y0 + 3 + (i % 3) * 5, 8, 2); }
+    }
+    // foreground ferns (they sway with the bar)
+    const sL = col(cur.cL), sD = col(cur.cD), sM = col(cur.cM);
+    const fern = (bx, dir) => {
+      for (let f = 0; f < 5; f++){
+        const ang = -1.25 + f * .26 + sway * .06 * (1 + S.i) * dir, len = 34 + (f % 3) * 8;
+        for (let i = 0; i < len; i++){
+          const x = Math.round(bx + Math.cos(ang) * i * dir * .9), y = Math.round(140 - Math.sin(-ang) * i * .9 + (i * i) * .012);
+          g.fillStyle = i % 5 === 0 ? sL : sD; g.fillRect(x, y, 1, 1);
+          if (i % 3 === 0 && i > 4){ g.fillStyle = sM; g.fillRect(x - 2 * dir, y + 1, 2, 1); g.fillRect(x + dir, y - 2, 1, 2); }
+        }
+      }
+    };
+    fern(8, 1); fern(W - 8, -1);
+    // fog
+    const fa = .1 + .25 * S.m + .12 * S.w;
+    g.fillStyle = col(cur.fog, fa);
+    for (let y = 78; y < 104; y += 2) for (let x = ((y * 5 + Math.floor(t * 4)) % 4); x < W; x += 4) g.fillRect(x, y, 2, 1);
+    // light shafts
+    if (!night && S.o > .2){
+      gg.fillStyle = col(cur.light, .12 * S.o);
+      for (let i = 0; i < 4; i++){ const x = 40 + i * 70 + Math.sin(t * .1 + i) * 8; gg.beginPath(); gg.moveTo(x, 0); gg.lineTo(x + 18, 0); gg.lineTo(x - 30, 110); gg.lineTo(x - 52, 110); gg.fill(); }
+    }
+    // fireflies on the 8th-note grid
+    if (S.m > .15 || night){
+      const amt = night ? 1 : clamp((S.m - .15) * 2);
+      for (let i = 0; i < flies.length; i++){
+        const f = flies[i]; if (i / flies.length > amt) break;
+        f.x += Math.sin(t * f.sp + f.ph) * .12; f.y += Math.cos(t * f.sp * .7 + f.ph) * .08;
+        const on = ((Math.floor(beatPos * 2) + i) % 5) === 0;
+        if (on){ gg.fillStyle = col([220, 255, 170], .9); gg.fillRect(Math.round(f.x) - 1, Math.round(f.y) - 1, 3, 3); rect([230, 255, 190], f.x, f.y, 1, 1); }
+      }
+    }
+    // birds
+    if (!playing && Math.random() < dt * .3) spawn(Math.random() < .3);
+    for (let i = birds.length - 1; i >= 0; i--){
+      const b = birds[i]; b.x += b.vx * dt; b.y += Math.sin(t * 3 + b.ph) * .15;
+      const fl = Math.floor(t * 9 + b.ph) & 1, c = b.near ? [30, 36, 34] : mix(cur.far, [30, 36, 34], .5);
+      rect(c, b.x, b.y, 1, 1);
+      if (fl){ rect(c, b.x - 2, b.y - 1, 2, 1); rect(c, b.x + 1, b.y - 1, 2, 1); } else { rect(c, b.x - 2, b.y + 1, 2, 1); rect(c, b.x + 1, b.y + 1, 2, 1); }
+      if (b.x < -10 || b.x > W + 10) birds.splice(i, 1);
+    }
+    if (flockT !== null && tAudio >= flockT){ for (let i = 0; i < 9; i++) spawn(true, 120 + Math.random() * 60, 70 + Math.random() * 20); flockT = null; }
+    // rain
+    if (rain && tAudio >= rain.a && tAudio <= rain.b){
+      const k = clamp(Math.min((tAudio - rain.a) / 1.2, (rain.b - tAudio) / 1.8));
+      g.fillStyle = col([220, 240, 245], .55 * k);
+      for (let i = 0; i < 140 * k; i++){ const x = (i * 53 + t * 40) % W, y = (i * 29 + t * 190) % H; g.fillRect(Math.round(x), Math.round(y), 1, 3); }
+    }
+  }
+  function spawn(near, x, y){
+    const dir = Math.random() < .5 ? 1 : -1;
+    birds.push({x:x != null ? x : (dir > 0 ? -5 : W + 5), y:y != null ? y : 14 + Math.random() * 46, vx:dir * (near ? 30 + Math.random() * 25 : 12 + Math.random() * 10), ph:Math.random() * 6, near});
+    if (birds.length > 24) birds.shift();
+  }
+  return {
+    frame,
+    setArea(a, t, now){ pendingArea = a; switchAt = t; if (now) area = a; },
+    bird(near){ spawn(near); },
+    rainAt(a, b){ rain = {a, b}; },
+    flockAt(t){ flockT = t; },
+  };
+})();
+
+let lastFrame = 0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  if (ts - lastFrame < 33) return;
+  lastFrame = ts;
+  let tA = performance.now() / 1000, beatPos = tA / BEAT;
+  if (E.ctx && E.playing && E.inst){ tA = E.ctx.currentTime; beatPos = (tA - E.inst.start) / BEAT; }
+  if (!E.playing && META) Scene.setArea(chooseSection(), 0, false);
+  Scene.frame(tA, beatPos, E.playing);
+  if (META) uiFrame();
+}
+
+// ------------------------------------------------------------------ boot
+fetch('meta.json').then(r => { if (!r.ok) throw new Error('meta.json HTTP ' + r.status); return r.json(); }).then(m => {
+  META = m;
+  BAR = m.bar / m.sr; BEAT = BAR / 4; LOOP = m.loop / m.sr; PHRASE = 4 * BAR;
+  buildAreaChips(); buildLanes(); buildAreaTable(); paintChords('A');
+  setInterval(tick, 40);
+}).catch(err => setStatus('Could not load the score data: ' + err.message));
+requestAnimationFrame(loop);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && E.ctx && E.playing) E.ctx.resume(); });
+})();
+</script>

@@ -1,0 +1,305 @@
+{
+ "sr": 48000,
+ "bpm": 90,
+ "bars": 16,
+ "loop": 2048000,
+ "bar": 128000,
+ "beat": 32000,
+ "tail": 432000,
+ "gap": 24000,
+ "layout": {
+  "imp": 1000,
+  "head": 8192,
+  "pad": 4096
+ },
+ "stems": {
+  "A": [
+   "amb",
+   "amb2",
+   "amb3",
+   "amb4",
+   "water",
+   "wildlife",
+   "birds",
+   "woods",
+   "shaker",
+   "drums",
+   "bass",
+   "keys",
+   "pad",
+   "marimba"
+  ],
+  "B": [
+   "amb",
+   "amb2",
+   "amb3",
+   "amb4",
+   "water",
+   "wildlife",
+   "birds",
+   "woods",
+   "shaker",
+   "drums",
+   "bass",
+   "keys",
+   "pad",
+   "marimba",
+   "kalimba"
+  ],
+  "C": [
+   "amb",
+   "amb2",
+   "amb3",
+   "amb4",
+   "water",
+   "wildlife",
+   "birds",
+   "woods",
+   "shaker",
+   "drums",
+   "bass",
+   "keys",
+   "pad",
+   "marimba",
+   "kalimba"
+  ],
+  "D": [
+   "amb",
+   "amb2",
+   "amb3",
+   "amb4",
+   "water",
+   "wildlife",
+   "birds",
+   "woods",
+   "shaker",
+   "drums",
+   "bass",
+   "keys",
+   "pad",
+   "marimba"
+  ],
+  "E": [
+   "amb",
+   "amb2",
+   "amb3",
+   "amb4",
+   "water",
+   "wildlife",
+   "birds",
+   "woods",
+   "shaker",
+   "drums",
+   "bass",
+   "keys",
+   "pad",
+   "marimba",
+   "kalimba"
+  ]
+ },
+ "beds": [
+  "amb",
+  "amb2",
+  "amb3",
+  "amb4",
+  "water",
+  "wildlife"
+ ],
+ "jungle": [
+  "amb",
+  "amb2",
+  "amb3",
+  "amb4",
+  "water",
+  "wildlife",
+  "birds"
+ ],
+ "music": [
+  "woods",
+  "shaker",
+  "drums",
+  "bass",
+  "keys",
+  "pad",
+  "marimba",
+  "kalimba"
+ ],
+ "leadin": {
+  "A": {
+   "kalimba": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "B": {
+   "kalimba": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "C": {
+   "kalimba": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "D": {
+   "kalimba": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "E": {
+   "kalimba": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "sections": {
+  "A": {
+   "name": "Jungle Exploration",
+   "mood": "warm, curious, lightly rhythmic",
+   "chords": [
+    "Dmaj9",
+    "E/D",
+    "Bm11",
+    "Gmaj9",
+    "D/F#",
+    "Em9",
+    "Gmaj9",
+    "Asus2",
+    "Gmaj9",
+    "F#m11",
+    "Em9",
+    "A13sus",
+    "Bbmaj9",
+    "Cmaj9",
+    "Em11",
+    "A9sus4"
+   ]
+  },
+  "B": {
+   "name": "River & Waterfall",
+   "mood": "spacious, shimmering, flowing",
+   "chords": [
+    "Dmaj9",
+    "Dmaj9",
+    "Bm9",
+    "Bm9",
+    "Gmaj7#11",
+    "Gmaj7#11",
+    "Asus2",
+    "A",
+    "F#m9",
+    "F#m9",
+    "Gmaj9",
+    "Gmaj9",
+    "Bbmaj7#11",
+    "Bbmaj7#11",
+    "Asus4",
+    "A"
+   ]
+  },
+  "C": {
+   "name": "Canopy Vista",
+   "mood": "open, emotional, soaring",
+   "chords": [
+    "Dmaj9",
+    "Dmaj9/C#",
+    "Bm11",
+    "Bbmaj7#11",
+    "Gmaj9",
+    "Gm6/9",
+    "Em11",
+    "A9sus4",
+    "Gmaj9",
+    "A/G",
+    "F#m11",
+    "Bm9",
+    "Em9",
+    "Gm6/9",
+    "Bbmaj9",
+    "A9sus4"
+   ]
+  },
+  "D": {
+   "name": "Moss Ruins",
+   "mood": "sparse, strange, shadowed",
+   "chords": [
+    "Dm9",
+    "Dm9",
+    "Bbmaj7#11",
+    "Bbmaj7#11",
+    "Gm6/9",
+    "Gm6/9",
+    "A7sus4b9",
+    "A7",
+    "Fmaj7#11",
+    "Fmaj7#11",
+    "Ebmaj7#11",
+    "Ebmaj7#11",
+    "Bbmaj9",
+    "Bbmaj9",
+    "Asus4",
+    "A"
+   ]
+  },
+  "E": {
+   "name": "Vine Run",
+   "mood": "rhythmic momentum, never combat",
+   "chords": [
+    "Dmaj9",
+    "E/D",
+    "Dmaj9",
+    "E/D",
+    "Bm11",
+    "Bm11",
+    "Gmaj9",
+    "Asus4",
+    "Gmaj9",
+    "A/G",
+    "F#m11",
+    "Bm9",
+    "Em9",
+    "F#m7",
+    "Gmaj9",
+    "A9sus4"
+   ]
+  }
+ },
+ "stingers": {
+  "anchor": 128000,
+  "length": 384000,
+  "names": [
+   "gust",
+   "flock",
+   "shower",
+   "woodpecker_roll",
+   "far_cry",
+   "fill_hands",
+   "fill_logs",
+   "rise"
+  ],
+  "offsets": [
+   0,
+   408000,
+   816000,
+   1224000,
+   1632000,
+   2040000,
+   2448000,
+   2856000
+  ]
+ }
+}
