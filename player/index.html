@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canopy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -157,6 +160,8 @@ footer{font-size:12px; color:var(--ink-3)}
       <p>An adaptive jungle soundscape for a pixel-art adventure · 90 BPM · D</p>
     </div>
     <div class="transport">
+      <label for="soundscape">Soundtrack</label>
+      <select id="soundscape" class="chip" aria-label="Soundtrack"><option value="jungle">Jungle</option><option value="space">Space</option><option value="canopy">Jungle Canopy Level</option><option value="mine">Mine Cart Level</option><option value="underwater">Underwater Level</option><option value="orbital">Orbital Rainforest</option><option value="crystal">Crystal Caverns</option><option value="greenhouse">Clockwork Greenhouse</option></select>
       <span class="status" id="status" role="status">48 kHz stems · press play</span>
       <button class="play" id="play" type="button" aria-label="Play">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path id="playIcon" d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
@@ -176,6 +181,20 @@ footer{font-size:12px; color:var(--ink-3)}
     </div>
   </section>
 
+  <section class="panel" id="gameplay" hidden>
+    <h2>Gameplay <span id="gameStage" role="status">Exploring</span></h2>
+    <div class="chips" id="gameStates" role="group" aria-label="Gameplay presets">
+      <button class="chip" type="button" data-state="quiet">Exploring / quiet</button>
+      <button class="chip" type="button" data-state="action">Action / platforming</button>
+      <button class="chip" type="button" data-state="climax">Danger / climax</button>
+    </div>
+    <div class="params" style="margin-top:14px">
+      <div class="param"><label for="g-movement">Movement<small>opens the filter</small></label><input id="g-movement" type="range" min="0" max="100" value="30"><output id="v-movement">30%</output></div>
+      <div class="param"><label for="g-progress">Progress<small>builds the score</small></label><input id="g-progress" type="range" min="0" max="100" value="0"><output id="v-progress">0%</output></div>
+      <div class="param"><label for="g-performance">Performance<small>combo, momentum</small></label><input id="g-performance" type="range" min="0" max="100" value="0"><output id="v-performance">0%</output></div>
+    </div>
+    <p class="pending">Layers enter on the next 4-bar phrase. Movement changes the filter immediately. Soundtrack changes restart playback.</p>
+  </section>
   <section class="deck">
     <div class="panel">
       <h2>Environment <span>quantized to 4-bar phrases</span></h2>
@@ -270,9 +289,18 @@ footer{font-size:12px; color:var(--ink-3)}
   <footer>All sound in Canopy is synthesized: no recordings, samples or existing music. Best in a desktop browser with headphones.</footer>
 </div>
 
+<script src="space.js"></script>
+<script src="fusion.js"></script>
 <script>
 (() => {
 'use strict';
+const requestedMode = new URLSearchParams(location.search).get('soundscape');
+const MODE = ['jungle','space',...Object.keys(CanopyFusion.modes)].includes(requestedMode) ? requestedMode : 'jungle';
+const SPACE = MODE === 'space';
+const FUSION = CanopyFusion.modes[MODE] ? CanopyFusion.create(MODE) : null;
+const SYNTH = FUSION || (SPACE ? CanopySpace : null);
+const GAME = {movement:.3, progress:0, performance:0};
+const gameState = () => ({...P,...GAME});
 const qs = (s, r = document) => r.querySelector(s);
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -357,7 +385,42 @@ function extract(buf, off48, len48){
   }
   return out;
 }
+let renderWorker = null;
+const renderJobs = new Map();
+function fusionBuf(key){
+  if (E.ready.has(key)) return Promise.resolve(E.ready.get(key));
+  if (E.dec.has(key)) return E.dec.get(key);
+  if (!renderWorker) {
+    renderWorker = new Worker('fusion-worker.js');
+    renderWorker.onmessage = ({data}) => {
+      const job = renderJobs.get(data.key); if (!job) return;
+      renderJobs.delete(data.key);
+      if (data.error) { E.dec.delete(data.key); job.reject(new Error(data.error)); return; }
+      const buffers = [0,2,4].map(i => {
+        const b = E.ctx.createBuffer(2, data.arrays[i].length, data.rate);
+        b.copyToChannel(data.arrays[i],0); b.copyToChannel(data.arrays[i+1],1); return b;
+      });
+      E.ready.set(data.key,buffers[0]); E.tready.set(data.key,{t16:buffers[1],t8:buffers[2]});
+      job.resolve(buffers[0]);
+    };
+    renderWorker.onerror = () => {
+      for (const [key,job] of renderJobs) { E.dec.delete(key); job.reject(new Error('Could not render soundtrack audio')); }
+      renderJobs.clear(); renderWorker.terminate(); renderWorker = null;
+    };
+  }
+  const promise = new Promise((resolve,reject) => { renderJobs.set(key,{resolve,reject}); renderWorker.postMessage({mode:MODE,key}); });
+  E.dec.set(key,promise); return promise;
+}
+function spaceBuf(key){
+  if (!E.ready.has(key)) {
+    const audio = CanopySpace.render(E.ctx, key);
+    E.ready.set(key, audio.buffer); E.tready.set(key, audio.tails);
+  }
+  return E.ready.get(key);
+}
 function loopBuf(key){
+  if (FUSION) return fusionBuf(key);
+  if (SPACE) return Promise.resolve(spaceBuf(key));
   if (!E.dec.has(key)) {
     const pr = file(key).then(ab => decode(ab.slice(0))).then(b => { const x = extract(b, 0, META.loop); E.ready.set(key, x); return x; });
     pr.catch(err => { E.dec.delete(key); console.warn(err); });
@@ -366,6 +429,8 @@ function loopBuf(key){
   return E.dec.get(key);
 }
 function tailBuf(key){
+  if (FUSION) return fusionBuf(key).then(() => E.tready.get(key));
+  if (SPACE) { spaceBuf(key); return Promise.resolve(E.tready.get(key)); }
   if (!E.tails.has(key)) {
     const pr = file(key + '_tails').then(ab => decode(ab.slice(0))).then(b => {
       const t = {t16: extract(b, 0, META.tail), t8: extract(b, META.tail + META.gap, META.tail)};
@@ -381,7 +446,7 @@ function releaseSection(sec){
   for (const k of [...E.tready.keys()]) if (k.startsWith(sec + '_')) { E.tready.delete(k); E.tails.delete(k); }
 }
 function sectionFiles(sec){ return META.stems[sec].map(s => sec + '_' + s); }
-function prefetchSection(sec){ return Promise.all(sectionFiles(sec).map(file)); }
+function prefetchSection(sec){ if (SYNTH) return Promise.resolve(); return Promise.all(sectionFiles(sec).map(file)); }
 
 // ------------------------------------------------------------------ audio graph
 function makeIR(ctx, dur){
@@ -406,16 +471,24 @@ function initAudio(){
   E.comp = ctx.createDynamicsCompressor();
   E.comp.threshold.value = -8; E.comp.knee.value = 8; E.comp.ratio.value = 3; E.comp.attack.value = 0.01; E.comp.release.value = 0.3;
   E.master = ctx.createGain(); E.master.gain.value = 0.0001;
-  E.verb = ctx.createConvolver(); E.verb.buffer = makeIR(ctx, 3.6);
+  E.verb = ctx.createConvolver(); E.verb.buffer = makeIR(ctx, FUSION ? (FUSION.config.reverb || (MODE === 'mine' ? 1.5 : MODE === 'underwater' ? 4.8 : 2.8)) : 3.6);
   E.send = ctx.createGain(); E.send.gain.value = 0.08;
   E.pre.connect(E.lp); E.lp.connect(E.comp); E.lp.connect(E.send); E.send.connect(E.verb); E.verb.connect(E.comp);
   E.comp.connect(E.master); E.master.connect(ctx.destination);
   for (const l of LAYERS){
-    const inp = ctx.createGain(), out = ctx.createGain(), an = ctx.createAnalyser();
+    const inp = ctx.createGain(), out = ctx.createGain(), duck = ctx.createGain(), an = ctx.createAnalyser();
     an.fftSize = 512; an.smoothingTimeConstant = 0;
-    inp.connect(out); out.connect(E.pre); out.connect(an);
+    inp.connect(duck); duck.connect(out); out.connect(E.pre); out.connect(an);
     out.gain.value = JUNGLE.has(l) ? 1 : UI.music;
-    E.bus[l] = {inp, out, an, buf:new Float32Array(512), level:0, peak:0};
+    E.bus[l] = {inp, out, duck, an, buf:new Float32Array(512), level:0, peak:0};
+  }
+  if (FUSION) {
+    E.comp.threshold.value = -16; E.comp.ratio.value = 4;
+    // A gently moving all-pass pair colours the string/machine layer.
+    const p1 = ctx.createBiquadFilter(), p2 = ctx.createBiquadFilter();
+    p1.type = p2.type = 'allpass'; p1.frequency.value = 500; p2.frequency.value = 1400;
+    E.bus.keys.inp.disconnect(); E.bus.keys.inp.connect(p1); p1.connect(p2); p2.connect(E.bus.keys.duck);
+    E.phaser = [p1,p2];
   }
   E.stBus = ctx.createGain(); E.stBus.connect(E.pre);
 }
@@ -461,6 +534,10 @@ function arrange(sec, pass){
   const L = UI.music > 0.001 ? Dir.level : 0;
   const groups = ORDER[sec][Dir.variant];
   for (let i = 0; i < L; i++) for (const s of groups[i]) if (has(sec, s)) t[s] = musicGain(s);
+  if (FUSION) {
+    for (const key of Object.keys(t)) delete t[key];
+    Object.assign(t,FUSION.arrange(gameState(),UI.mode,takeFor(sec,pass)));
+  }
   for (const l of LAYERS){
     const f = UI.force[l];
     const key = l === 'amb' ? takeFor(sec, pass) : l;
@@ -505,7 +582,7 @@ function playTail(buf, stem, t, gain){
   s.connect(g); g.connect(E.bus[stem].inp); s.start(t);
 }
 function playStinger(name, tb, gain){
-  if (!E.stingers || !E.stingers[name]) return;
+  if (SYNTH || !E.stingers || !E.stingers[name]) return;
   const t0 = tb - BAR;
   if (t0 < E.ctx.currentTime + .02) return;
   const s = E.ctx.createBufferSource(); s.buffer = E.stingers[name];
@@ -707,13 +784,29 @@ function tick(){
     if (st.val <= .001 && now > st.idleAt){ try { st.src.stop(); } catch (e) {} st.src.disconnect(); delete inst.stems[key]; }
   }
   // master effects follow the environment
-  const cutoff = 19000 - 10500 * Math.pow(P.mystery, 1.4);
+  const cutoff = FUSION ? 650 + 16000 * Math.pow(GAME.movement,.8) * (1 - .3 * P.mystery) : 19000 - 10500 * Math.pow(P.mystery, 1.4);
+  if (FUSION) {
+    const depth = (.16 + .55 * FUSION.energy(gameState())) * Math.min(1, levelOf(inst,'drums'));
+    // Schedule beat-synchronous ducking ahead of the audio clock, independent of frame rate.
+    const nextBeat = Math.max(0,Math.ceil((now-inst.start)/BEAT));
+    if (E.duckInst !== inst) { E.duckInst = inst; E.duckBeat = nextBeat - 1; }
+    for (let b = Math.max(nextBeat,E.duckBeat+1); inst.start+b*BEAT < now+.2; b++) {
+      const t = inst.start+b*BEAT;
+      for (const layer of ['bass','keys','pad','kalimba']) {
+        const gain = E.bus[layer].duck.gain;
+        gain.setValueAtTime(1,t); gain.linearRampToValueAtTime(1-depth,t+.015);
+        gain.exponentialRampToValueAtTime(1,t+BEAT*.86);
+      }
+      E.duckBeat = b;
+    }
+    E.phaser.forEach((filter,i) => filter.frequency.setTargetAtTime(650+i*800+400*Math.sin(now*.6),now,.08));
+  }
   E.lp.frequency.setTargetAtTime(cutoff, now, .8);
   E.send.gain.setTargetAtTime(.04 + .22 * P.openness + .12 * P.water, now, .8);
 }
 
 async function start(){
-  if (E.starting) return;
+  if (E.starting || !META) return;
   E.starting = true;
   try {
     if (!E.ctx) initAudio();
@@ -728,7 +821,7 @@ async function start(){
     let done = 0;
     const all = keys.map(k => loopBuf(k).then(v => { done++; setStatus('Loading ' + META.sections[sec].name + '… ' + Math.round(100 * done / keys.length) + '%'); return v; }));
     const tails = keys.filter(k => !BEDS.has(base(k.slice(2)))).map(tailBuf);
-    const stP = file('stingers').then(ab => decode(ab.slice(0))).then(b => {
+    const stP = SYNTH ? Promise.resolve() : file('stingers').then(ab => decode(ab.slice(0))).then(b => {
       const o = {}; META.stingers.names.forEach((nm, i) => o[nm] = extract(b, META.stingers.offsets[i], META.stingers.length)); E.stingers = o;
     }).catch(e => console.warn(e));
     await Promise.all(all.concat(tails));
@@ -753,7 +846,7 @@ async function start(){
     E.master.gain.setValueAtTime(.0001, t0 - .2);
     E.master.gain.linearRampToValueAtTime(1, t0 + .4);
     setPlaying(true);
-    setStatus('Playing · stems decode as they are needed');
+    setStatus(SYNTH ? 'Playing · ' + (FUSION ? FUSION.config.name : 'synthesized space soundtrack') : 'Playing · stems decode as they are needed');
     stP.then(() => {});
     // background: fetch the other areas' files so area changes are quick
     (async () => { for (const a of AREAS) if (a !== sec) { try { await prefetchSection(a); } catch (e) {} } })();
@@ -864,7 +957,7 @@ function buildLanes(){
   const chl = mkLane('chordrow'); ch.appendChild(chl); root.appendChild(ch);
   LAYERS.forEach((l, i) => {
     const r = document.createElement('div'); r.className = 'lrow' + (l === 'woods' || i === 0 ? ' sep' : ''); r.dataset.layer = l;
-    const nm = document.createElement('div'); nm.className = 'lname'; nm.innerHTML = LABEL[l] + (i === 0 ? '<em>jungle</em>' : l === 'woods' ? '<em>music bed</em>' : '');
+    const nm = document.createElement('div'); nm.className = 'lname'; nm.innerHTML = LABEL[l] + (i === 0 ? (SYNTH ? '<em>ambience</em>' : '<em>jungle</em>') : l === 'woods' ? '<em>music bed</em>' : '');
     const fb = document.createElement('button'); fb.type = 'button'; fb.className = 'force'; fb.dataset.f = 'auto'; fb.textContent = 'auto';
     fb.setAttribute('aria-label', LABEL[l] + ': automatic');
     fb.addEventListener('click', () => {
@@ -885,7 +978,7 @@ function buildAreaTable(){
   const tb = qs('#areaTable');
   AREAS.forEach(a => {
     const s = META.sections[a], tr = document.createElement('tr');
-    tr.innerHTML = '<td><b>' + s.name + '</b><br><span style="color:var(--ink-3)">' + s.mood + '</span></td><td>' + AREA_TEXT[a][0] + '</td><td>' + AREA_TEXT[a][1] + '</td><td class="chords">' + s.chords.join(' · ') + '</td>';
+    tr.innerHTML = '<td><b>' + s.name + '</b><br><span style="color:var(--ink-3)">' + s.mood + '</span></td><td>' + AREA_TEXT[a][0] + '</td><td>' + AREA_TEXT[a][1] + '</td><td class="chords">' + (SYNTH ? [...new Set(s.chords)] : s.chords).join(' · ') + '</td>';
     tb.appendChild(tr);
   });
 }
@@ -906,7 +999,7 @@ function uiFrame(){
   }
   qs('#hudClock').textContent = 'Bar ' + String(bar + 1).padStart(2, '0') + ' · ' + (beat + 1);
   qs('#hudPhrase').textContent = 'Phrase ' + (Math.floor(bar / 4) + 1) + ' of 4';
-  qs('#hudChord').textContent = UI.music > .001 && Dir.level > 0 ? 'Harmony · ' + META.sections[sec].chords[bar] : 'Pure jungle';
+  qs('#hudChord').textContent = UI.music > .001 && (FUSION || Dir.level > 0) ? 'Harmony · ' + META.sections[sec].chords[bar] : (FUSION ? 'Environment only' : SPACE ? 'Deep space' : 'Pure jungle');
   // pending area
   const want = chooseSection();
   let pend = '';
@@ -918,7 +1011,7 @@ function uiFrame(){
     pend = 'Heading to <b>' + META.sections[want].name + '</b> · ' + (bars === 0 ? 'now' : 'in ' + bars + (bars === 1 ? ' bar' : ' bars'));
     qs('#hudNext').textContent = META.sections[want].name + ' in ' + bars + ' bars';
   } else {
-    qs('#hudNext').textContent = inst ? (Dir.level === 0 || UI.music <= .001 ? 'Only the jungle' : 'Music bed · level ' + Dir.level + ' of 4') : 'Press play';
+    qs('#hudNext').textContent = inst ? ((!FUSION && Dir.level === 0) || UI.music <= .001 ? (FUSION ? 'Environment only' : SPACE ? 'Only the cosmos' : 'Only the jungle') : (FUSION ? FUSION.stage(gameState()) + ' · ' + (UI.mode === 'breathe' ? 'adaptive score' : UI.mode + ' arrangement') : 'Music bed · level ' + Dir.level + ' of 4')) : 'Press play';
   }
   qs('#pending').innerHTML = pend;
   // lanes
@@ -1189,14 +1282,91 @@ function loop(ts){
   let tA = performance.now() / 1000, beatPos = tA / BEAT;
   if (E.ctx && E.playing && E.inst){ tA = E.ctx.currentTime; beatPos = (tA - E.inst.start) / BEAT; }
   if (!E.playing && META) Scene.setArea(chooseSection(), 0, false);
-  Scene.frame(tA, beatPos, E.playing);
+  if (FUSION && MODE !== 'canopy') CanopyFusion.frame(MODE,qs('#scene'),qs('#glow'),tA,FUSION.energy(gameState()),E.inst ? E.inst.sec : chooseSection());
+  else if (SPACE) CanopySpace.frame(qs('#scene'), qs('#glow'), tA, E.inst ? E.inst.sec : chooseSection(), P.intensity);
+  else Scene.frame(tA, beatPos, E.playing);
   if (META) uiFrame();
+}
+
+// Soundtrack selection reloads the score so sources and pending decodes cannot cross modes.
+qs('#soundscape').value = MODE;
+qs('#soundscape').addEventListener('change', e => {
+  const url = new URL(location.href);
+  url.searchParams.set('soundscape', e.target.value);
+  location.assign(url);
+});
+if (SPACE) {
+  setStatus('Procedural space audio · press play');
+  Object.assign(LABEL, CanopySpace.labels);
+  document.documentElement.dataset.theme = 'dark';
+  qs('.brand p').textContent = 'An adaptive space soundtrack for an interstellar adventure · 90 BPM · D';
+  qs('.viewport').setAttribute('aria-label', 'Live space scene');
+  qs('label[for="p-water"]').innerHTML = 'Nebula<small>ion clouds, shimmer</small>';
+  qs('label[for="p-myst"]').innerHTML = 'Mystery<small>signals, deep space</small>';
+  qs('label[for="p-music"] small').textContent = 'under the cosmos';
+  qs('.scale-ends span').textContent = 'Deep space';
+  qs('#hudArea').textContent = 'Orbital Drift';
+  qs('#hudMood').textContent = 'weightless, warm, slowly unfolding';
+  qs('#hudNext').textContent = 'The cosmos is waiting';
+  qs('.notes').innerHTML = '<div class="panel full"><h3>A score for the stars</h3><p>Five destinations blend stellar drones, ion washes and distant radio signals with a breathing bed of nebula pads, glass keys, sub bass and electronic pulses. Every layer is synthesized in your browser.</p><p>Intensity builds the pulse; Openness leads to Deep Field; Nebula brings out Ion Nebula; Mystery moves into Derelict Station. Music bed at zero leaves only the space ambience. Area, arrangement, auto-explore and layer controls work just as they do in Jungle.</p><p>90 BPM · 16-bar loops · area changes on 8-bar boundaries. Changing soundtrack starts a fresh session; press Play to begin.</p><table><tbody id="areaTable"></tbody></table></div>';
+  const destinations = Object.values(CanopySpace.areas);
+  PLACES.forEach((place, i) => place.name = destinations[i % destinations.length][0]);
+  for (const a of AREAS) AREA_TEXT[a] = ['Stellar drone, ion wash, radio signals and beacon chimes', 'Nebula pad, sub bass, glass keys, sonar and electronic pulses'];
+}
+
+if (FUSION) {
+  const config = FUSION.config;
+  setStatus(config.bpm + ' BPM · procedural score · press play');
+  Object.assign(LABEL,FUSION.labels);
+  document.documentElement.dataset.theme = MODE === 'canopy' ? 'light' : 'dark';
+  qs('.brand p').textContent = config.name + ' · ' + config.bpm + ' BPM · ' + config.key;
+  qs('.viewport').setAttribute('aria-label','Live ' + config.name + ' scene');
+  qs('label[for="p-water"]').innerHTML = (MODE === 'mine' ? 'Machinery<small>steam, rail echoes</small>' : MODE === 'underwater' ? 'Currents<small>tides, bubbles</small>' : 'Water<small>falls, forest air</small>');
+  if(config.environment) qs('label[for="p-water"]').innerHTML = config.environment[0] + '<small>' + config.environment[1] + '</small>';
+  qs('label[for="p-music"] small').textContent = 'acoustic → electronic';
+  qs('.scale-ends span').textContent = 'Environment';
+  qs('.scale-ends span:last-child').textContent = 'Full score';
+  qs('[data-mode="breathe"]').textContent = 'Adaptive';
+  qs('#gameplay').hidden = false;
+  qs('.notes').innerHTML = '<div class="panel full"><h3>' + config.name + '</h3><p>' + config.description + '</p><p><b>Exploring:</b> ' + (config.stages?.[0] || 'Atmosphere, breathy flute and a distant kick.') + ' <b>Action:</b> ' + (config.stages?.[1] || 'Organic rhythm, mallets and bass join the electronic groove.') + ' <b>Climax:</b> ' + (config.stages?.[2] || 'Strings, arpeggios or robotic vowels complete the mix.') + '</p><p>Intensity, progress and performance choose the build; Movement opens the global low-pass filter. Use Adaptive for gameplay response, or pin Sparse, Medium or Full. All layers share a 16-bar harmonic progression, with four-bar arrangement changes and eight-bar destination changes. Electronic layers duck on the kick. All instruments, creatures and mechanical sounds are synthesized.</p><p>Original procedural synthesis inspired by the requested acoustic and electronic palette. ' + config.bpm + ' BPM · ' + config.key + '. Each soundtrack uses its own tempo; changing soundtracks restarts playback.</p><div class="tbl"><table><thead><tr><th>Destination</th><th>Atmosphere</th><th>Music</th><th>Harmony</th></tr></thead><tbody id="areaTable"></tbody></table></div></div>';
+  PLACES.forEach((place,i) => place.name = config.sections[i%5]);
+  for (const a of AREAS) AREA_TEXT[a] = [[FUSION.labels.water, FUSION.labels.birds, FUSION.labels.amb].join(', '), config.description];
+  function paintGame(){
+    qs('#gameStage').textContent = FUSION.stage(gameState()) + ' · ' + Math.round(FUSION.energy(gameState())*100) + '% energy';
+    for (const key of Object.keys(GAME)) {
+      const el=qs('#g-'+key); el.value=Math.round(GAME[key]*100); paintSlider(el);
+      qs('#v-'+key).textContent=el.value+'%';
+    }
+  }
+  for (const key of Object.keys(GAME)) qs('#g-'+key).addEventListener('input',e=>{ GAME[key]=e.target.value/100; paintGame(); });
+  qs('#p-int').addEventListener('input',paintGame);
+  qs('#gameStates').addEventListener('click',e=>{
+    const button=e.target.closest('[data-state]'); if(!button) return;
+    const values={quiet:[.12,.08,0,0],action:[.55,.6,.4,.45],climax:[.95,1,.9,.9]}[button.dataset.state];
+    window.CanopyGame.setState({intensity:values[0],movement:values[1],progress:values[2],performance:values[3]});
+    qs('[data-mode="breathe"]').click();
+  });
+  // Same-origin host games can feed normalized telemetry without starting audio.
+  window.CanopyGame = Object.freeze({
+    setState(state){
+      if(!state || typeof state !== 'object') throw new TypeError('Game state must be an object');
+      const keys=['intensity','movement','progress','performance'];
+      for(const key of keys) if(key in state && (typeof state[key] !== 'number' || !Number.isFinite(state[key]))) throw new TypeError(key+' must be a finite number');
+      if('intensity' in state){ const el=qs('#p-int'); el.value=Math.round(clamp(state.intensity)*100); el.dispatchEvent(new Event('input')); }
+      for(const key of Object.keys(GAME)) if(key in state) GAME[key]=clamp(state[key]);
+      paintGame();
+      return {...gameState(),stage:FUSION.stage(gameState())};
+    },
+    getState(){ return {...gameState(),stage:FUSION.stage(gameState())}; }
+  });
+  paintGame();
 }
 
 // ------------------------------------------------------------------ boot
 fetch('meta.json').then(r => { if (!r.ok) throw new Error('meta.json HTTP ' + r.status); return r.json(); }).then(m => {
-  META = m;
+  META = SYNTH ? SYNTH.configure(m) : m;
   BAR = m.bar / m.sr; BEAT = BAR / 4; LOOP = m.loop / m.sr; PHRASE = 4 * BAR;
+  qs('#passInfo').textContent = '16 bars · ' + LOOP.toFixed(1) + ' s loop';
   buildAreaChips(); buildLanes(); buildAreaTable(); paintChords('A');
   setInterval(tick, 40);
 }).catch(err => setStatus('Could not load the score data: ' + err.message));
