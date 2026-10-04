@@ -77,11 +77,15 @@ class Suite:
         self.order = OrderedDict()      # instrument -> first appearance (seconds)
         self.markers = []               # (seconds, label)
         self.intros = []                # (seconds, text) announcer cues
+        self.bars = []                  # (seconds, meter, chord) — the bar grid, for the web player
         self._n = 0
 
     def part(self, inst, pan=0.0, gain_db=0.0, sends=None, **kw):
         self._n += 1
         return self.s.part(f'{inst}#{self._n}', inst, pan=pan, gain_db=gain_db, sends=sends or {'studio': 0.18}, **kw)
+
+    def bar(self, beat, meter, chord=None):
+        self.bars.append((round(self.s.clock.sec(beat), 4), meter, chord))
 
     def section(self, label, bpm):
         self.s.tempo_at(self.cur, bpm)
@@ -122,6 +126,7 @@ def forest_floor(S: Suite, bars=24):
 
     for b in range(bars):
         ch = prog[b % 8]
+        S.bar(m.bar(b), '15/8', ch)
         root = th.bass_note(ch, nm('A1'), nm('G#2'))
         c = list(cell)
         if ch == 'A':
@@ -225,6 +230,7 @@ def creature_chorus(S: Suite, cycles=3, used=None):
     for b in range(nbars):
         t0 = S.cur + b * bb
         ch = prog[b % 8]
+        S.bar(t0, '4/4', ch)
         root = th.bass_note(ch, nm('D1'), nm('C#2'))
         # the band of creatures
         for e, v in ((0, 0.9), (3, 0.6), (6, 0.7)):
@@ -288,6 +294,7 @@ def rain_on_leaves(S: Suite, reps=4):
     for b in range(nb):
         t0 = S.cur + b * bb
         ch = prog[b % 8]
+        S.bar(t0, '3/4', ch)
         rep = b // 8
         root = th.bass_note(ch, nm('E2'), nm('D#3'))
         tones = th.lead([nm('B3'), nm('D4'), nm('G4')], ch, nm('A3'), nm('B4'), 3)
@@ -351,6 +358,7 @@ def census(S: Suite, pool):
     for b in range(nbars):
         t0 = S.cur + b * bb
         ch = prog[b % 8]
+        S.bar(t0, '4/4', ch.split('/')[0])
         for x in (nm('D3'), nm('A3')):
             ped.note(t0, x, bb * 0.99, 0.4)
         for k in range(8):
@@ -439,6 +447,7 @@ def drums_of_kapok(S: Suite, bars=32):
     rng = np.random.default_rng(4)
     for b in range(bars):
         ch = prog[b]
+        S.bar(m.bar(b), '12/8', ch)
         root = th.bass_note(ch, nm('D2'), nm('C#3'))
         acc = 1.0 if b < bars - 2 else 1.1
         for k, c in enumerate(BELL):
@@ -508,133 +517,209 @@ def drums_of_kapok(S: Suite, bars=32):
 
 
 # ============================================================ V. THE PROCESSION
+def fit_phrase(notes, inst, prefer=0):
+    """transpose a whole phrase by octaves so it sits inside the instrument's range
+    (keeps the melody's contour, unlike per-note octave folding). prefer: octave
+    shift to try first."""
+    info = REGISTRY[inst]
+    lo, hi = min(notes), max(notes)
+    for k in [prefer] + [prefer + d for d in (1, -1, 2, -2, 3, -3)]:
+        if lo + 12 * k >= info.lo and hi + 12 * k <= info.hi:
+            return 12 * k
+    return 12 * round(((info.lo + info.hi) / 2 - (lo + hi) / 2) / 12)
+
+
 def procession(S: Suite):
+    """Tubular Bells–style finale: a riff, then one instrument at a time is
+    introduced and *featured* — it plays the theme for four bars, on its own
+    melody line — before it settles into the accompaniment and the next one
+    arrives. Then everybody plays the theme together, and the canopy opens."""
     S.section('V. The Procession', 100)
     bb = 4
     riff = [(0, 1.5, 'D2'), (1.5, 0.5, 'D2'), (2, 1, 'A2'), (3, 1, 'C3'), (4, 1, 'D3'), (5, 1, 'C3'), (6, 1, 'A2'),
             (7, 0.5, 'G2'), (7.5, 0.5, 'A2')]
-    prog2 = ['D', 'C/D', 'G/D', 'D', 'D', 'C/D', 'Bb', 'C']     # per bar, 8-bar cycle (mixolydian)
+    prog = ['D', 'C/D', 'G/D', 'D', 'D', 'C/D', 'Bb', 'C']     # one chord per bar of the 8-bar theme (mixolydian)
     theme = [(0, 0, 4, 'A4'), (1, 0, 2, 'D5'), (1, 2, 2, 'E5'), (2, 0, 4, 'F#5'), (3, 0, 2, 'E5'), (3, 2, 2, 'D5'),
              (4, 0, 3, 'E5'), (4, 3, 1, 'D5'), (5, 0, 2, 'C5'), (5, 2, 2, 'A4'), (6, 0, 4, 'D5'), (7, 0, 2, 'C5'),
              (7, 2, 2, 'E5')]
-    intros = [
-        ('Grand piano', 'piano'), ('Reed and pipe organ', 'organ'), ('Glockenspiel', 'glock'),
-        ('Bass guitar', 'bassg'), ('Double-speed guitar', 'dsg'), ('Two slightly distorted guitars', 'lead2'),
-        ('Mandolin', 'mand'), ('Spanish guitar, and introducing acoustic guitar', 'acou'),
-        ('Bamboo flutes', 'flutes'), ('The tree-frog choir', 'frogs'), ('Steel pans', 'pans'),
-        ('Howler monkeys', 'howl'), ('Plus ... tubular bells!', 'bells')]
-    P = {
-        'piano': S.part(R('keys.grand_piano', 'grand_piano', 'piano'), pan=-0.1, gain_db=-2, sends={'hall': 0.25}),
-        'organ': S.part(R('organ.pipe', 'pipe'), pan=0.0, gain_db=-9, sends={'church': 0.3}),
-        'reed': S.part(R('organ.harmonium', 'harmonium', 'reed_organ', 'pump'), pan=0.2, gain_db=-10, sends={'hall': 0.2}),
-        'glock': S.part(R('mallet.glockenspiel', 'glock'), pan=0.5, gain_db=-3, sends={'hall': 0.3}),
-        'bassg': S.part(R('bass.fingered', 'bass.picked', 'bass'), gain_db=-2, sends={'studio': 0.1}),
-        'dsg': S.part(R('guitar.double_speed', 'double', 'electric', 'guitar'), pan=-0.45, gain_db=-8, sends={'studio': 0.2}),
-        'lead2a': S.part(R('guitar.oldfield_lead', 'oldfield', 'lead'), pan=-0.3, gain_db=0, sends={'hall': 0.25, 'echo': 0.15}),
-        'lead2b': S.part(R('guitar.oldfield_lead', 'oldfield', 'lead'), pan=0.3, gain_db=-2, sends={'hall': 0.25, 'echo': 0.15}),
-        'mand': S.part(R('pluck.mandolin', 'mandolin'), pan=0.4, gain_db=-1, sends={'hall': 0.2}),
-        'span': S.part(R('guitar.nylon', 'nylon', 'spanish'), pan=-0.55, gain_db=-6, sends={'hall': 0.2}),
-        'acou': S.part(R('guitar.steel', 'steel', 'acoustic', '12_string'), pan=0.55, gain_db=-7, sends={'hall': 0.2}),
-        'flute1': S.part(R('flute.bamboo', 'bamboo'), pan=-0.25, gain_db=-1, sends={'hall': 0.3}),
-        'flute2': S.part(R('flute.pan_flute', 'pan_flute', 'flute'), pan=0.25, gain_db=-6, sends={'hall': 0.3}),
-        'frogs': S.part(R('creature.treefrog_choir', 'treefrog'), pan=0.0, gain_db=-8, sends={'canopy': 0.3}),
-        'pans': S.part(R('mallet.steel_pan', 'steel_pan', 'steelpan', 'pan'), pan=0.35, gain_db=-4, sends={'hall': 0.25}),
-        'howl': S.part(R('creature.howler', 'howler', 'monkey'), pan=-0.5, gain_db=-8, sends={'valley': 0.4}),
-        'bells': S.part(R('bell.tubular', 'tubular', 'chime'), pan=0.15, gain_db=1, sends={'church': 0.45}),
-        'choir': S.part(R('voice.choir_aah', 'choir'), gain_db=-6, sends={'church': 0.4}),
-        'strings': S.part(R('bowed.section_warm', 'section', 'strings'), gain_db=-6, sends={'hall': 0.35}),
-        'timp': S.part(R('drum.timpani', 'timpani'), gain_db=-5, sends={'hall': 0.3}),
-        'kit_k': S.part(R('drum.kick_felt', 'kick'), gain_db=-6, sends={'studio': 0.1}),
-        'kit_s': S.part(R('drum.snare', 'snare'), gain_db=-4, sends={'hall': 0.15}),
-    }
-    pre = 2          # bars of riff alone (on the bass marimba) before the first introduction
-    intro_bars = 2
-    total = pre + len(intros) * intro_bars + 8
-    entered = set()
-    starter = S.part(R('mallet.marimba_bass', 'bass_marimba', 'marimba'), gain_db=-3, sends={'hall': 0.15})
-    for b in range(total):
+    TH = [nm(x) for (_, _, _, x) in theme]
+    pre = 2            # bars of riff alone before the first introduction
+    feat = 4           # bars each new instrument is featured
+    # (announcement, key, lead instrument, preferred octave shift for the theme)
+    intros = [('Grand piano', 'piano', 'keys.grand_piano', 0),
+              ('Reed and pipe organ', 'organ', 'organ.pipe', 0),
+              ('Glockenspiel', 'glock', 'bell.glockenspiel', 1),
+              ('Bass guitar', 'bassg', 'bass.fingered', -2),
+              ('Double-speed guitar', 'dsg', 'guitar.double_speed', 0),
+              ('Two slightly distorted guitars', 'lead2', 'guitar.oldfield_lead', 0),
+              ('Mandolin', 'mand', 'pluck.mandolin', 0),
+              ('Spanish guitar, and introducing acoustic guitar', 'span', 'guitar.nylon_spanish', 0),
+              ('Bamboo flutes', 'flutes', 'flute.bamboo', 0),
+              ('The tree-frog choir', 'frogs', 'creature.treefrog_choir', 1),
+              ('Steel pans', 'pans', 'metal.steel_pan', 0),
+              ('Howler monkeys', 'howl', 'creature.howler_roar', -2),
+              ('Plus ... tubular bells!', 'bells', 'bell.tubular', 0)]
+    L = {}   # featured (lead) parts — loud, centred-ish
+    A = {}   # accompaniment parts — what each instrument does after its feature
+
+    def lead(key, inst, pan=0.0, db=0.0, sends=None):
+        L[key] = S.part(R(inst), pan=pan, gain_db=db, sends=sends or {'hall': 0.28, 'echo': 0.08})
+        return L[key]
+
+    def acc(key, inst, pan=0.0, db=-10.0, sends=None):
+        A[key] = S.part(R(inst), pan=pan, gain_db=db, sends=sends or {'hall': 0.22})
+        return A[key]
+
+    lead('piano', 'keys.grand_piano', -0.05, 0)
+    lead('organ', 'organ.pipe', 0.0, -3, {'church': 0.35})
+    lead('glock', 'bell.glockenspiel', 0.3, 1)
+    lead('bassg', 'bass.fingered', 0.0, 2, {'studio': 0.12})
+    lead('dsg', 'guitar.double_speed', -0.2, -1)
+    lead('lead2', 'guitar.oldfield_lead', -0.3, 0, {'hall': 0.3, 'echo': 0.18})
+    lead('lead2b', 'guitar.oldfield_lead', 0.3, -2, {'hall': 0.3, 'echo': 0.18})
+    lead('mand', 'pluck.mandolin', 0.15, 1)
+    lead('span', 'guitar.nylon_spanish', -0.15, 1)
+    lead('flutes', 'flute.bamboo', -0.1, 0, {'hall': 0.35, 'echo': 0.12})
+    lead('flutes2', 'flute.pan_flute', 0.25, -4, {'hall': 0.35})
+    lead('frogs', 'creature.treefrog_choir', 0.0, 2, {'canopy': 0.3})
+    lead('pans', 'metal.steel_pan', 0.1, 4)
+    lead('howl', 'creature.howler_roar', 0.0, 3, {'valley': 0.3})
+    lead('bells', 'bell.tubular', 0.1, 3, {'church': 0.45})
+    starter = acc('marimba', 'mallet.marimba_bass', 0.0, -6, {'hall': 0.12})
+    acc('piano', 'keys.grand_piano', -0.35, -11)
+    acc('organ', 'organ.pipe', 0.0, -13, {'church': 0.3})
+    acc('reed', 'organ.harmonium', 0.25, -14)
+    acc('glock', 'bell.glockenspiel', 0.55, -14)
+    acc('bassg', 'bass.fingered', 0.0, -5, {'studio': 0.1})
+    acc('dsg', 'guitar.double_speed', -0.55, -14)
+    acc('mand', 'pluck.mandolin', 0.5, -15)
+    acc('span', 'guitar.nylon_spanish', -0.6, -13)
+    acc('acou', 'guitar.steel_acoustic', 0.6, -10)
+    acc('flutes', 'flute.pan_flute', -0.4, -15, {'hall': 0.35})
+    acc('frogs', 'creature.treefrog_choir', 0.45, -14, {'canopy': 0.3})
+    acc('pans', 'metal.steel_pan', -0.45, -15)
+    acc('howl', 'creature.howler_roar', -0.6, -10, {'valley': 0.35})
+    tutti = {k: S.part(R(i), pan=p, gain_db=d, sends={'church': 0.35}) for k, i, p, d in
+             (('choir', 'voice.choir_aah', 0.0, -6), ('strings', 'strings.section_warm', 0.0, -6),
+              ('timp', 'drum.timpani', 0.0, -5), ('kick', 'drum.kick_felt', 0.0, -6), ('snare', 'drum.snare', 0.0, -6))}
+
+    def play_theme(part, t_bar0, half, inst, prefer, vel=0.78, legato=0.97, fn=None):
+        shift = fit_phrase(TH, inst, prefer)
+        for (bar, s, d, x) in theme:
+            if half is not None and bar // 4 != half:
+                continue
+            t = t_bar0 + (bar - (4 * half if half is not None else 0)) * bb + s
+            if fn:
+                fn(part, t, nm(x) + shift, d)
+            else:
+                part.note(t, nm(x) + shift, d * legato, vel)
+
+    def dsg_fn(part, t, m, d):            # double speed: the theme as fast tremolo-picked 16ths
+        for k in range(int(d * 4)):
+            part.note(t + k * 0.25, m, 0.23, 0.82 if k == 0 else 0.6)
+
+    def span_fn(part, t, m, d):           # Spanish guitar: melody with a thumb bass under it
+        part.note(t, m, d * 0.95, 0.8)
+        part.note(t, m - 12 if m - 12 >= REGISTRY['guitar.nylon_spanish'].lo else m - 7, d * 0.9, 0.5)
+
+    entered = []
+    nbars = pre + feat * len(intros)
+    for b in range(nbars + 8):
         t0 = S.cur + b * bb
-        ch = prog2[b % 8]
-        k_int = (b - pre) // intro_bars
-        if b >= pre and (b - pre) % intro_bars == 0 and k_int < len(intros):
-            entered.add(intros[k_int][1])
-            S.intros.append((S.s.clock.sec(t0 - 1.5), intros[k_int][0]))
-        full = b >= pre + len(intros) * intro_bars
-        # riff (2 bars long, so it pairs with the chord cycle)
-        if b % 2 == 0:
+        tb = b - pre                      # bar within the theme cycle
+        ch = prog[tb % 8]
+        S.bar(t0, '4/4', ch.split('/')[0])
+        k = tb // feat if tb >= 0 else -1
+        start_feature = tb >= 0 and tb % feat == 0 and k < len(intros)
+        if start_feature:
+            name, key, inst, pref = intros[k]
+            S.intros.append((S.s.clock.sec(t0 - 1.5), name))
+            half = k % 2
+            fn = dsg_fn if key == 'dsg' else span_fn if key == 'span' else None
+            vel = 0.85 if key in ('bells', 'howl', 'frogs') else 0.78
+            play_theme(L[key], t0, half, inst, pref, vel=vel, fn=fn)
+            if key == 'lead2':      # the second guitar a third below
+                shift = fit_phrase(TH, inst, pref)
+                for (bar, s, d, x) in theme:
+                    if bar // 4 == half:
+                        third = th.diatonic_shift([nm(x) + shift], -2, th.scale_notes('D', 'mixolydian', 40, 96))[0]
+                        L['lead2b'].note(t0 + (bar - 4 * half) * bb + s, third, d * 0.97, 0.72)
+            if key == 'flutes':     # pan flute answers each phrase a beat later
+                for (bar, s, d, x) in theme:
+                    if bar // 4 == half and d >= 2:
+                        L['flutes2'].note(t0 + (bar - 4 * half) * bb + s + 1, nm(x) + fit_phrase(TH, 'flute.pan_flute', 0) + 12,
+                                          d * 0.6, 0.5)
+        if tb >= 0 and tb % feat == 0 and k - 1 >= 0 and k - 1 < len(intros):
+            entered.append(intros[k - 1][1])      # the previous feature joins the band
+        if start_feature and intros[k][1] == 'span':
+            entered.append('acou')                # "...and introducing acoustic guitar": strums enter with it
+        full = tb >= feat * len(intros)
+        # ---------------- the riff: bass marimba until the bass guitar has had its feature
+        if b % 2 == (pre % 2):
             for (o, d, x) in riff:
-                xs = nm(x)
-                if ch.startswith('Bb'):
-                    xs -= 4 if o == 0 else 0
-                if b < pre + 6:
-                    starter.note(t0 + o, xs + 12, d * 0.9, 0.7)
-                if 'piano' in entered:
-                    P['piano'].note(t0 + o, xs + 24, d * 0.9, 0.62)
+                xs = nm(x) - (4 if ch.startswith('Bb') and o == 0 else 0)
                 if 'bassg' in entered:
-                    P['bassg'].note(t0 + o, xs, d * 0.92, 0.75)
-        tm = [n for n in theme if n[0] == b % 8]
+                    A['bassg'].note(t0 + o, xs, d * 0.92, 0.78)
+                else:
+                    starter.note(t0 + o, xs + 12, d * 0.9, 0.72)
+        # ---------------- accompaniment of everyone already introduced
         if 'piano' in entered:
-            for x in th.voice(ch, nm('D4'), 3):
-                P['piano'].note(t0 + 2, x, 1.8, 0.45)
+            v = th.voice(ch, nm('D4'), 3)
+            for s in (0, 2):
+                A['piano'].chord(t0 + s, v, 1.8, 0.45)
         if 'organ' in entered:
             for x in th.voice(ch, nm('A3'), 4):
-                P['organ'].note(t0, x, bb * 0.98, 0.5)
-                P['reed'].note(t0, x + 12, bb * 0.98, 0.45)
+                A['organ'].note(t0, x, bb * 0.98, 0.5)
+                A['reed'].note(t0, x + 12, bb * 0.98, 0.42)
         if 'glock' in entered:
-            for (_, s, d, x) in tm:
-                P['glock'].note(t0 + s, nm(x) + 12, 0.8, 0.55)
+            A['glock'].note(t0, th.lead([nm('A6')], ch, nm('D6'), nm('D7'), 1)[0], 1.0, 0.5)
         if 'dsg' in entered:
             tones = th.lead([nm('D4'), nm('A4'), nm('D5')], ch, nm('A3'), nm('F#5'), 3)
-            for k in range(16):
-                P['dsg'].note(t0 + k * 0.25, tones[[0, 2, 1, 2][k % 4]], 0.22, 0.55 if k % 4 else 0.7)
-        if 'lead2' in entered:
-            for (_, s, d, x) in tm:
-                P['lead2a'].note(t0 + s, x, d * 0.98, 0.75)
-                third = th.diatonic_shift([nm(x)], -2, th.scale_notes('D', 'mixolydian', 50, 90))[0]
-                P['lead2b'].note(t0 + s, third, d * 0.98, 0.68)
+            for j in range(16):
+                A['dsg'].note(t0 + j * 0.25, tones[[0, 2, 1, 2][j % 4]], 0.22, 0.55)
         if 'mand' in entered:
-            for (_, s, d, x) in tm:
-                P['mand'].note(t0 + s, nm(x) + 12, d * 0.95, 0.5)
+            A['mand'].note(t0, th.lead([nm('F#5')], ch, nm('D5'), nm('A5'), 1)[0], bb * 0.9, 0.45)
+        if 'span' in entered:
+            v = th.voice(ch, nm('D3'), 5)
+            for s in (0, 1.5, 3):
+                A['span'].chord(t0 + s, v, 0.6, 0.45, strum=0.02)
         if 'acou' in entered:
             v = th.voice(ch, nm('D3'), 5)
-            for s in (0, 1.5, 2, 3, 3.5):
-                P['span'].chord(t0 + s, v, 0.45, 0.5, strum=0.02)
-                P['acou'].chord(t0 + s + 0.02, [x + 12 for x in v[:4]], 0.4, 0.45, strum=-0.015)
-        if 'flutes' in entered:
-            for (_, s, d, x) in tm:
-                P['flute1'].note(t0 + s, nm(x) + 12, d * 0.95, 0.55)
-            if b % 2 == 1:
-                P['flute2'].note(t0 + 1, th.lead([nm('A5')], ch, nm('E5'), nm('D6'), 1)[0], 2.8, 0.45)
+            for s in (0, 1, 1.5, 2, 3, 3.5):
+                A['acou'].chord(t0 + s, [x + 12 for x in v[:4]], 0.4, 0.5 if s in (0, 2) else 0.38, strum=-0.015)
+        if 'flutes' in entered and b % 2 == 1:
+            A['flutes'].note(t0 + 1, th.lead([nm('A5')], ch, nm('E5'), nm('D6'), 1)[0], 2.8, 0.45)
         if 'frogs' in entered:
-            for x in th.voice(ch, nm('A4'), 3):
-                for s in (0.5, 1.5, 2.5, 3.5):
-                    P['frogs'].note(t0 + s, x, 0.3, 0.4)
+            for s in (0.5, 1.5, 2.5, 3.5):
+                A['frogs'].note(t0 + s, th.lead([nm('A5')], ch, nm('D5'), nm('D6'), 1)[0], 0.3, 0.45)
         if 'pans' in entered:
             tones = [x for x in range(nm('D5'), nm('D6')) if x % 12 in th.pcs(ch)]
-            for k in range(8):
-                P['pans'].note(t0 + k * 0.5, tones[(k * 2) % len(tones)], 0.45, 0.5)
-        if 'howl' in entered and b % 4 == 1:
-            P['howl'].note(t0 + 2, th.bass_note(ch, nm('D3'), nm('C#4')), 2.5, 0.6)
-        if 'bells' in entered:
-            for (_, s, d, x) in tm:
-                P['bells'].note(t0 + s, x, max(d, 2), 0.85)
+            for j in range(8):
+                A['pans'].note(t0 + j * 0.5, tones[(j * 2) % len(tones)], 0.45, 0.45)
+        if 'howl' in entered and tb % 4 == 3:
+            A['howl'].note(t0 + 1, th.bass_note(ch, nm('D3'), nm('C#4')), 2.5, 0.6)
+        # ---------------- everybody: the whole theme, twice as grand
         if full:
-            j = b - (pre + len(intros) * intro_bars)
+            j = tb - feat * len(intros)
+            for key, inst, pref in (('lead2', 'guitar.oldfield_lead', 0), ('bells', 'bell.tubular', 0),
+                                    ('glock', 'bell.glockenspiel', 1), ('flutes', 'flute.bamboo', 0),
+                                    ('mand', 'pluck.mandolin', 0)):
+                if j == 0:
+                    play_theme(L[key], t0, None, inst, pref, vel=0.8)
             for x in th.voice(ch, nm('D4'), 4):
-                P['choir'].note(t0, x, bb * 0.98, 0.5 + 0.04 * j)
-                P['strings'].note(t0, x - 12, bb * 0.98, 0.5 + 0.04 * j)
-            P['timp'].note(t0, th.bass_note(ch, nm('D2'), nm('C#3')), 1.5, 0.6 + 0.04 * j)
+                tutti['choir'].note(t0, x, bb * 0.98, 0.5 + 0.04 * j)
+                tutti['strings'].note(t0, x - 12, bb * 0.98, 0.5 + 0.04 * j)
+            tutti['timp'].note(t0, th.bass_note(ch, nm('D2'), nm('C#3')), 1.5, 0.6 + 0.04 * j)
             for s in (0, 1.5, 2.5):
-                P['kit_k'].note(t0 + s, 60, 0.4, 0.7)
+                tutti['kick'].note(t0 + s, 60, 0.4, 0.7)
             for s in (1, 3):
-                P['kit_s'].note(t0 + s, 60, 0.3, 0.55)
-    P['piano'].level(S.cur + (pre + 2) * bb, 0).level(S.cur + (pre + 4) * bb, -5)
-    S.cur += total * bb
+                tutti['snare'].note(t0 + s, 60, 0.3, 0.55)
+    S.cur += (nbars + 8) * bb
     # final grand chord, then the canopy opens: space synths take the theme
     end = S.cur
-    for p, xs in ((P['organ'], [nm('D3'), nm('A3'), nm('D4'), nm('F#4')]), (P['choir'], [nm('D4'), nm('A4'), nm('F#5')]),
-                  (P['strings'], [nm('D3'), nm('A3'), nm('F#4')]), (P['bells'], [nm('D5')]), (P['timp'], [nm('D2')]),
-                  (P['bassg'], [nm('D2')]), (P['piano'], [nm('D2'), nm('D3'), nm('A3'), nm('F#4')])):
+    for p, xs in ((A['organ'], [nm('D3'), nm('A3'), nm('D4'), nm('F#4')]), (tutti['choir'], [nm('D4'), nm('A4'), nm('F#5')]),
+                  (tutti['strings'], [nm('D3'), nm('A3'), nm('F#4')]), (L['bells'], [nm('D5')]), (tutti['timp'], [nm('D2')]),
+                  (A['bassg'], [nm('D2')]), (A['piano'], [nm('D2'), nm('D3'), nm('A3'), nm('F#4')])):
         for x in xs:
             p.note(end, x, 6.0, 0.85)
     S.cur = end + 4
@@ -660,6 +745,7 @@ def cosmos(S: Suite, bars=12):
     for b in range(bars):
         t0 = S.cur + b * bb
         ch = prog[b]
+        S.bar(t0, '4/4', ch)
         v = th.lead(prev, ch, nm('A3'), nm('E5'), 4)
         prev = v
         for x in v:
@@ -711,6 +797,7 @@ def hornpipe(S: Suite):
                 tempo = min(172.0, tempo + 2.4)
                 S.s.tempo_at(t0, tempo)
             ch = chs[i]
+            S.bar(t0, '4/4', ch)
             for k, x in enumerate(row.split()):
                 if x == '.':
                     continue

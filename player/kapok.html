@@ -1,0 +1,137 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAPOK · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ground:#0F1715; --panel:#16211E; --panel-2:#1D2B27; --ink:#E3ECE6; --ink-2:#A3B5AB; --ink-3:#71847A;
+  --line:#2B3A35; --accent:#45C2BA; --accent-ink:#06201E; --sun:#F1B955;
+  --f-display:"Pixelify Sans", ui-monospace, monospace;
+  --f-ui:"Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-ui); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px; margin:0 auto; padding:18px clamp(16px,3vw,28px) 56px; display:flex; flex-direction:column; gap:18px}
+button,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+.top{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+.brand h1{font-family:var(--f-display); font-weight:600; font-size:clamp(30px,4.2vw,42px); line-height:1; margin:0; letter-spacing:.04em}
+.brand p{margin:0; color:var(--ink-2); font-size:14px}
+.transport{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.chip{border:1px solid var(--line); background:var(--panel); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.play{display:inline-flex; align-items:center; gap:10px; border:0; border-radius:999px; padding:10px 20px 10px 14px; background:var(--accent); color:var(--accent-ink); font-weight:600; cursor:pointer}
+.play svg{width:18px; height:18px}
+.status{font-family:var(--f-mono); font-size:12px; color:var(--ink-2); min-height:1.2em}
+.viewport{position:relative; width:100%; aspect-ratio:320/140; border-radius:10px; overflow:hidden; background:#081210; box-shadow:0 10px 30px -18px rgba(0,0,0,.8)}
+.viewport canvas{position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges}
+.hud{position:absolute; inset:0; pointer-events:none; color:#F4F7F2; text-shadow:0 1px 0 rgba(0,0,0,.6), 0 0 8px rgba(0,0,0,.4)}
+.hud>div{position:absolute}
+.tl{left:clamp(10px,2vw,20px); top:clamp(8px,1.6vw,16px)}
+.tr{right:clamp(10px,2vw,20px); top:clamp(8px,1.6vw,16px); text-align:right; font-family:var(--f-mono); font-size:clamp(11px,1.3vw,13px)}
+.bl{left:clamp(10px,2vw,20px); bottom:clamp(8px,1.6vw,14px); font-family:var(--f-mono); font-size:clamp(11px,1.3vw,13px)}
+.br{right:clamp(10px,2vw,20px); bottom:clamp(8px,1.6vw,14px); text-align:right; max-width:60%}
+.mv{font-family:var(--f-display); font-size:clamp(16px,2.4vw,24px); line-height:1.1}
+.sub{font-size:clamp(11px,1.3vw,13px); opacity:.85}
+.pill{display:inline-block; background:rgba(5,14,12,.55); border:1px solid rgba(255,255,255,.15); border-radius:999px; padding:2px 10px}
+.enter{font-size:clamp(12px,1.5vw,15px)}
+.enter b{font-family:var(--f-display); font-weight:400; font-size:clamp(14px,1.9vw,20px)}
+.enter small{display:block; opacity:.8; font-size:clamp(10px,1.2vw,12px)}
+.announce{position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); font-family:var(--f-display); font-size:clamp(18px,3.6vw,38px); text-align:center; opacity:0; transition:opacity .4s; white-space:nowrap}
+.announce.on{opacity:1}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px}
+.panel h2{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); margin:0 0 10px; font-weight:600}
+.timeline{position:relative; height:34px; border-radius:8px; overflow:hidden; cursor:pointer; background:var(--panel-2)}
+.timeline .seg{position:absolute; top:0; bottom:0; display:flex; align-items:center; padding-left:6px; font-size:11px; color:rgba(255,255,255,.85); white-space:nowrap; overflow:hidden; border-right:1px solid rgba(0,0,0,.35)}
+.timeline .head{position:absolute; top:0; bottom:0; width:2px; background:#fff; box-shadow:0 0 6px #fff}
+.times{display:flex; justify-content:space-between; font-family:var(--f-mono); font-size:12px; color:var(--ink-2); margin-top:6px}
+.chips{display:flex; flex-wrap:wrap; gap:8px}
+.grid{display:grid; grid-template-columns:1.2fr 1fr; gap:18px}
+@media (max-width:820px){ .grid{grid-template-columns:1fr} }
+.now{display:flex; flex-wrap:wrap; gap:6px; min-height:64px; align-content:flex-start}
+.now span{font-family:var(--f-mono); font-size:11.5px; padding:2px 8px; border-radius:6px; background:var(--panel-2); border-left:3px solid var(--c,#45C2BA); transition:opacity .3s}
+.now span.new{background:#2a463f}
+.count{font-family:var(--f-mono); color:var(--sun)}
+.board{display:grid; grid-template-columns:92px 1fr; gap:3px 10px; align-items:center; font-size:12px; color:var(--ink-2)}
+.board canvas{width:100%; height:12px; display:block; cursor:pointer; border-radius:3px}
+.credits{max-height:360px; overflow:auto; padding-right:6px; display:flex; flex-direction:column; gap:2px; scroll-behavior:smooth}
+.credit{display:grid; grid-template-columns:44px 1fr; gap:10px; padding:5px 8px; border-radius:6px; opacity:.45; cursor:pointer}
+.credit.in{opacity:1}
+.credit.latest{background:var(--panel-2)}
+.credit time{font-family:var(--f-mono); font-size:12px; color:var(--ink-3)}
+.credit .n{font-weight:600; font-size:13.5px}
+.credit .d{color:var(--ink-2); font-size:12.5px}
+.notes p{color:var(--ink-2); margin:.4em 0}
+.toggle{display:inline-flex; align-items:center; gap:8px; font-size:13px}
+a{color:var(--accent)}
+</style>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>KAPOK</h1>
+      <p>An Oldfield-style suite · <span id="ninst">234</span> synthesized instruments · Canopy Orchestra</p>
+    </div>
+    <div class="transport">
+      <label for="soundscape" class="status">Soundtrack</label>
+      <select id="soundscape" class="chip" aria-label="Soundtrack"></select>
+      <span class="status" id="status" role="status">press play</span>
+      <button class="play" id="play" type="button" aria-label="Play">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path id="playIcon" d="M8 5v14l11-7z"/></svg><span id="playLabel">Play</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="viewport" aria-label="Climbing the kapok tree">
+    <canvas id="scene" width="320" height="140"></canvas>
+    <div class="hud">
+      <div class="tl"><div class="mv" id="hudMove">I. Forest Floor</div><div class="sub" id="hudSub">the climb begins at the roots</div></div>
+      <div class="tr"><div id="hudBar">Bar 1 · 15/8</div><div id="hudTime">0:00 / 0:00</div></div>
+      <div class="bl"><span class="pill" id="hudChord">Dm9</span></div>
+      <div class="br enter" id="hudEnter"></div>
+      <div class="announce" id="announce"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="timeline" id="timeline" role="slider" aria-label="Position" tabindex="0"></div>
+    <div class="times"><span id="tNow">0:00</span><span id="tLeft">movements · click to jump</span><span id="tEnd">0:00</span></div>
+    <div class="chips" id="moves" style="margin-top:12px"></div>
+    <div class="chips" style="margin-top:12px; align-items:center">
+      <button class="chip" id="mcToggle" type="button" aria-pressed="true">Announcer on</button>
+      <span class="status">Game events (in key, on the beat):</span>
+      <button class="chip" data-ev="collect" type="button">Collect</button>
+      <button class="chip" data-ev="checkpoint" type="button">Checkpoint</button>
+      <button class="chip" data-ev="hurt" type="button">Hurt</button>
+      <button class="chip" data-ev="secret" type="button">Secret</button>
+      <button class="chip" data-ev="victory" type="button">Victory</button>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Sounding now · <span class="count" id="count">0</span> instruments</h2>
+      <div class="now" id="now"></div>
+      <h2 style="margin-top:16px">Families across the suite</h2>
+      <div class="board" id="board"></div>
+    </section>
+    <section class="panel">
+      <h2>Credits · in order of appearance</h2>
+      <div class="credits" id="credits"></div>
+    </section>
+  </div>
+
+  <section class="panel notes">
+    <h2>About</h2>
+    <p>The kapok is the tallest tree in the rainforest. KAPOK climbs it, from the roots to the stars where the game's space half begins. It moves through a 15/8 ostinato, a creature hocket, a 3/4 rain pastoral, an Amarok-style roll call of every instrument, an Ommadawn-style drum ensemble, a procession of instruments introduced one by one ("…plus tubular bells"), and a reel that keeps speeding up.</p>
+    <p>Every instrument is synthesized by Canopy Orchestra (<code>src/orchestra</code>), with no samples or recordings. The optional announcer is text-to-speech and is mixed in live here. Render the suite with <code>cd src &amp;&amp; python3 -m tracks.kapok</code>, then export it for this page with <code>python3 -m tracks.kapok_web ../out/kapok</code>.</p>
+    <p>Same API as the adaptive player: <code>CanopyGame.on('bar'|'movement', fn)</code>, <code>CanopyGame.event('collect')</code>, <code>CanopyGame.seek(seconds)</code>, <code>CanopyGame.getState()</code>.</p>
+  </section>
+</div>
+<script src="events.js"></script>
+<script src="kapok.js"></script>

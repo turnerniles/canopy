@@ -11,11 +11,12 @@ The kapok is the tallest tree in the rainforest. The suite climbs it, from the f
 | III. Rain on the Leaves | 3/4 | Pastoral. The same melody passes from mandolin tremolo to tin whistle and recorder in thirds, then to violin and cello, then to ocarina and celesta. |
 | Interlude: the Kapok Census | 4/4 | An *Amarok*-style roll call. Every instrument not featured elsewhere gets a one-beat in-key cameo. |
 | IV. Drums of the Kapok | 12/8 | An *Ommadawn*-style ensemble: the West African bell, djembes, dunun, talking drum, bodhrán and udu. Wordless call-and-response chant, then uilleann pipes, kora and berimbau. The climax adds the sustain lead guitar and timpani. |
-| V. The Procession | 4/4 | The instruments are introduced one by one, ending with "…plus tubular bells". Then the canopy opens: theremin, string machine, granular shimmer and FM bells carry the theme into space. |
+| V. The Procession | 4/4 | Over a D riff, 13 instruments are introduced one at a time, ending with "…plus tubular bells". Each gets its own 4-bar feature (9.6 s) playing the theme before it joins the accompaniment and the next one arrives. `tracks/check_procession.py` verifies that the announced instrument is the loudest voice in its window. Then everybody plays the theme, and the canopy opens: theremin, string machine, granular shimmer and FM bells carry it into space. |
 | VI. Hornbill Hornpipe | 4/4 reel | A jaunty reel that keeps speeding up, from 112 to 172 BPM. A bullfrog has the last word. |
 
-Render it with `cd src && python3 -m tracks.kapok`. It takes about 2 minutes on 2 cores. `tracks/kapok_mc.py` overlays an optional spoken master of ceremonies for the Procession.
+**Listen in the web player:** choose **KAPOK** in the Soundtrack menu, or open `player/kapok.html`. The page has a pixel-art climb up the tree, a movement timeline, a "now entering" ticker, the full credits, a family activity board, the optional announcer, and beat-quantised game events on Kapok's own chords.
 
+Render it with `cd src && python3 -m tracks.kapok`, then export it for the page with `python3 -m tracks.kapok_web ../out/kapok [MC_DIR]`. It takes about 2 minutes on 2 cores. `tracks/kapok_mc.py` overlays an optional spoken master of ceremonies for the Procession.
 
 All synthesized by Canopy Orchestra. No samples or recordings.
 
@@ -239,20 +240,20 @@ All synthesized by Canopy Orchestra. No samples or recordings.
 - 5:06  `pluck.berimbau` — Berimbau musical bow: stick-struck wire, coin buzz and gourd wah-wah that pumps for as long as the gate  (IV. Drums of the Kapok)
 - 5:25  `drum.surdo` — surdo: deep samba bass, felt mallet on plastic, long open hum  (IV. Drums of the Kapok)
 - 5:25  `drum.timpani` — pedal timpani: felt mallet, tuned principal tone over the copper kettle; rolls when held  (IV. Drums of the Kapok)
-- 6:06  `bass.fingered` — Fingered electric bass: round two-finger thump, neck-pickup warmth, muted when the gate ends  (V. The Procession)
-- 6:11  `guitar.double_speed` — Oldfield "double-speed" guitar: half-speed-recorded steel string sped up, chipmunk-bright, compressed and glittering  (V. The Procession)
-- 6:25  `guitar.steel_acoustic` — Steel-string dreadnought: crisp pick, booming low end, long silvery sustain  (V. The Procession)
-- 6:49  `bell.tubular` — orchestral tubular bells: rawhide strike on the cap, clangorous chime, long hum  (V. The Procession)
-- 6:54  `voice.choir_aah` — mixed choir on "aah": eight singers, each with own vibrato and pitch, warm and wide  (V. The Procession)
-- 6:54  `drum.kick_felt` — acoustic kick with felt beater and blanket: round woof  (V. The Procession)
-- 6:54  `drum.snare` — snare drum: stick on coated head, crisp wire sizzle; buzz roll when held  (V. The Procession)
-- 7:15  `synth.string_machine` — string machine: Solina-style thin saws in a swirling triple-delay ensemble  (V. ... into the stars)
-- 7:15  `synth.granular_shimmer` — granular shimmer: a sparkling cloud of pitched grains on the note, octave and twelfth  (V. ... into the stars)
-- 7:15  `synth.sub_bass` — sub bass: deep sine with velocity growl and a tiny thump  (V. ... into the stars)
-- 7:23  `creature.whale_call` — whale moan: rising into the note, lazy waver, slowly opening throat, sinking glide, echoes  (V. ... into the stars)
-- 7:30  `keys.mellotron_strings` — Mellotron tape strings: wobbly three-violin tape replay, dusty bandwidth, runs out after 8 s  (V. ... into the stars)
-- 8:20  `pluck.bouzouki` — Irish bouzouki: long-scale steel courses, low ones in octaves, jangly plectrum drone-strummer  (VI. Hornbill Hornpipe)
-- 9:13  `creature.kookaburra_laugh` — kookaburra laugh: a cackling run of harsh "ha" syllables that builds and tails off  (VI. Hornbill Hornpipe)
+- 6:20  `bass.fingered` — Fingered electric bass: round two-finger thump, neck-pickup warmth, muted when the gate ends  (V. The Procession)
+- 6:30  `guitar.double_speed` — Oldfield "double-speed" guitar: half-speed-recorded steel string sped up, chipmunk-bright, compressed and glittering  (V. The Procession)
+- 6:59  `guitar.steel_acoustic` — Steel-string dreadnought: crisp pick, booming low end, long silvery sustain  (V. The Procession)
+- 7:47  `bell.tubular` — orchestral tubular bells: rawhide strike on the cap, clangorous chime, long hum  (V. The Procession)
+- 7:56  `voice.choir_aah` — mixed choir on "aah": eight singers, each with own vibrato and pitch, warm and wide  (V. The Procession)
+- 7:56  `drum.kick_felt` — acoustic kick with felt beater and blanket: round woof  (V. The Procession)
+- 7:57  `drum.snare` — snare drum: stick on coated head, crisp wire sizzle; buzz roll when held  (V. The Procession)
+- 8:18  `synth.string_machine` — string machine: Solina-style thin saws in a swirling triple-delay ensemble  (V. ... into the stars)
+- 8:18  `synth.granular_shimmer` — granular shimmer: a sparkling cloud of pitched grains on the note, octave and twelfth  (V. ... into the stars)
+- 8:18  `synth.sub_bass` — sub bass: deep sine with velocity growl and a tiny thump  (V. ... into the stars)
+- 8:25  `creature.whale_call` — whale moan: rising into the note, lazy waver, slowly opening throat, sinking glide, echoes  (V. ... into the stars)
+- 8:32  `keys.mellotron_strings` — Mellotron tape strings: wobbly three-violin tape replay, dusty bandwidth, runs out after 8 s  (V. ... into the stars)
+- 9:22  `pluck.bouzouki` — Irish bouzouki: long-scale steel courses, low ones in octaves, jangly plectrum drone-strummer  (VI. Hornbill Hornpipe)
+- 10:16  `creature.kookaburra_laugh` — kookaburra laugh: a cackling run of harsh "ha" syllables that builds and tails off  (VI. Hornbill Hornpipe)
 
 ## Sections
 
@@ -262,21 +263,21 @@ All synthesized by Canopy Orchestra. No samples or recordings.
 - 3:31  Interlude: the Kapok Census
 - 4:27  IV. Drums of the Kapok
 - 5:47  V. The Procession
-- 7:15  V. ... into the stars
-- 7:45  VI. Hornbill Hornpipe
+- 8:18  V. ... into the stars
+- 8:48  VI. Hornbill Hornpipe
 
 ## Introductions (announcer cues)
 
 - 350.96s  Grand piano
-- 355.76s  Reed and pipe organ
-- 360.56s  Glockenspiel
-- 365.36s  Bass guitar
-- 370.16s  Double-speed guitar
-- 374.96s  Two slightly distorted guitars
-- 379.76s  Mandolin
-- 384.56s  Spanish guitar, and introducing acoustic guitar
-- 389.36s  Bamboo flutes
-- 394.16s  The tree-frog choir
-- 398.96s  Steel pans
-- 403.76s  Howler monkeys
-- 408.56s  Plus ... tubular bells!
+- 360.56s  Reed and pipe organ
+- 370.16s  Glockenspiel
+- 379.76s  Bass guitar
+- 389.36s  Double-speed guitar
+- 398.96s  Two slightly distorted guitars
+- 408.56s  Mandolin
+- 418.16s  Spanish guitar, and introducing acoustic guitar
+- 427.76s  Bamboo flutes
+- 437.36s  The tree-frog choir
+- 446.96s  Steel pans
+- 456.56s  Howler monkeys
+- 466.16s  Plus ... tubular bells!

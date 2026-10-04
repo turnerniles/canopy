@@ -834,12 +834,12 @@ _TUB = (P(_chime[0], 0.04, 2.0), P(_chime[1], 0.12, 1.8, 0.4, 0.2),
         P(_chime[2], 0.35, 1.4, 0.5, 0.3), P(_chime[3], 1.0, 1.0, 0.35, 0.25),
         P(_chime[4], 0.9, 0.75, 0.8, 0.2), P(_chime[5], 0.7, 0.55), P(_chime[6], 0.45, 0.42, 1.3, 0.2),
         P(_chime[7], 0.3, 0.32), P(_chime[8], 0.15, 0.22), P(_chime[9], 0.08, 0.16))
-register('bell.tubular', m_bell, 'bell', lo='C4', hi='F5', tags=(OR, OL, IN),
+register('bell.tubular', m_bell, 'bell', lo='C4', hi='G5', tags=(OR, OL, IN),
          desc='orchestral tubular bells: rawhide strike on the cap, clangorous chime, long hum',
          partials=_TUB, tau=2.4, tau_ref=262.0, slope=0.5, tau_lim=(1.2, 3.5), tc=0.38e-3,
          noise=0.25, nband=(2500.0, 12000.0), ntau=0.006, cap=9.0, jit=0.003)
 _TUBH = tuple((r, a * (1.0 if r < 3 else 1.35), tm, b, bd, ri, c) for (r, a, tm, b, bd, ri, c) in _TUB)
-register('bell.tubular_hammer', m_bell, 'bell', lo='C4', hi='F5', tags=(OR, OL, IN),
+register('bell.tubular_hammer', m_bell, 'bell', lo='C4', hi='G5', tags=(OR, OL, IN),
          desc='"plus... tubular bells": the chime hit with a hammer, harsh steel clang, wide stereo',
          partials=_TUBH, tau=2.6, tau_ref=262.0, slope=0.5, tau_lim=(1.3, 3.7), tc=0.2e-3,
          noise=0.6, nband=(3000.0, 14000.0), ntau=0.008, cap=9.0, mics=0.35, sat=0.25, jit=0.004)
