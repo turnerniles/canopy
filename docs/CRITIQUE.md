@@ -46,7 +46,7 @@ Reviewed for its intended use: building an adaptive soundtrack for a 2D pixel-ar
    - a pause treatment
 
    Space now has real 16-bar progressions with 9 voices, and synthesized modes get transition risers.
-6. **KAPOK (`src/tracks/kapok.py`).** An original Oldfield-style suite, 9:22 long, that plays all 234 instruments. It doubles as the library's showcase and its regression test.
+6. **KAPOK (`src/tracks/kapok.py`).** An original Oldfield-style suite, 10:25 long, that plays all 234 instruments. It doubles as the library's showcase and its regression test. It also has its own page in the web player (`player/kapok.html`).
 7. **Tests.** `python3 -m orchestra.selftest` covers parsing, determinism, chunked versus full rendering, seams, tails and grammar. `player/events.test.cjs` is new, and `space.test.cjs` is extended.
 
 ## Recommended next steps
