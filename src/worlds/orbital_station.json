@@ -1,0 +1,62 @@
+{
+  "id": "orbital_station",
+  "name": "Orbital Station",
+  "about": "World 2: the jungle's tree reaches space. Same home key (D) and cadence grammar as jungle_temple, so the last jungle area can hand over to Launch Bay on any 8-bar line. Jungle timbres return transformed (kalimba through the cosmos room, frogs become pulsars).",
+  "bpm": 100, "beats_per_bar": 4, "bars": 16, "key": "D", "mode": "lydian",
+  "master_gain_db": "auto",
+  "echo": {"beats": 1.5, "feedback": 0.45, "damp": 4500},
+  "stingers": {
+    "collect": {"inst": "fm_bell"}, "checkpoint": {"inst": "glass_marimba"},
+    "victory": {"inst": "analog_brass"}, "death": {"inst": "theremin"},
+    "to_A": {"inst": "string_machine"}, "to_B": {"inst": "granular"}, "to_C": {"inst": "fm_bell"},
+    "to_D": {"inst": "satellite_ping"}, "to_E": {"inst": "acid"}
+  },
+  "areas": {
+    "A": {
+      "name": "Launch Bay", "mood": "weightless, warm, the jungle far below", "room": "cosmos",
+      "progression": ["Dmaj9", "Dmaj9/C#", "Bm11", "Gmaj7#11", "Gmaj9", "Em11", "Gmaj9", "A9sus4", "Dmaj9", "Bm9", "Gmaj7#11", "Em9", "Bbmaj7#11", "Cmaj9", "Em11", "A9sus4"],
+      "layers": {
+        "beacons": {"pattern": "scatter", "insts": ["pulsar", "satellite_ping", "bat"], "density": 1.2, "low": "A5", "high": "A7", "grid": 0.25, "tier": 1, "bed": true, "gain_db": -16, "sends": {"cosmos": 0.4}},
+        "pad":     {"inst": "string_machine", "pattern": "pad", "voices": 4, "tier": 1, "gain_db": -14, "sends": {"cosmos": 0.45}},
+        "cell":    {"inst": "kalimba", "pattern": "ostinato", "degrees": [5, 1, 2, 5, 2, 1, 2, 3], "rhythm": "x.xx.xx.x.xx.x.x", "base": "D5", "tier": 1, "gain_db": -12, "sends": {"cosmos": 0.4, "echo": 0.25}},
+        "sub":     {"inst": "sub_bass", "pattern": "bass", "rhythm": "x-------x-----a-", "tier": 2, "gain_db": -9},
+        "seq":     {"inst": "glass_marimba", "pattern": "arp", "rhythm": "x.xx.xx.x.xx.xx.", "shape": "up", "low": "D4", "high": "D6", "tier": 2, "gain_db": -13, "pan": 0.3, "sends": {"cosmos": 0.3, "echo": 0.15}},
+        "pulse":   {"pattern": "drums", "kit": {"k": "kick_modern", "h": "shaker"}, "rhythm": {"k": "x...x...x...x...", "h": "..x...x...x...x."}, "tier": 2, "gain_db": -12},
+        "motif":   {"inst": "theremin", "pattern": "motif", "notes": "A4 - D5 - E5 - A5 - - - - - F#5 - E5 -", "step": 0.5, "bars": [1, 5, 9, 13], "tier": 3, "gain_db": -8, "sends": {"cosmos": 0.45, "echo": 0.2}}
+      }
+    },
+    "B": {
+      "name": "Asteroid Garden", "mood": "glassy, luminous, drifting rocks with moss on them", "room": "cosmos",
+      "progression": ["Dmaj9", "Dmaj9", "Bm9", "Bm9", "Gmaj7#11", "Gmaj7#11", "Asus2", "A", "F#m9", "F#m9", "Gmaj9", "Gmaj9", "Bbmaj7#11", "Bbmaj7#11", "Asus4", "A"],
+      "layers": {
+        "shimmer": {"inst": "granular", "pattern": "pad", "voices": 3, "low": "D4", "high": "D6", "tier": 1, "bed": true, "gain_db": -16, "sends": {"cosmos": 0.5}},
+        "frogs":   {"pattern": "scatter", "insts": ["treefrog_choir", "pulsar"], "density": 1.0, "low": "D5", "high": "D7", "grid": 0.5, "tier": 1, "gain_db": -16, "sends": {"cosmos": 0.4}},
+        "bells":   {"inst": "fm_bell", "pattern": "arp", "rhythm": "x.....x.....x...", "shape": "motif", "order": [0, 3, 1, 4], "low": "D5", "high": "D7", "tier": 2, "gain_db": -12, "sends": {"cosmos": 0.4, "echo": 0.3}},
+        "bass":    {"inst": "fretless", "pattern": "bass", "rhythm": "x-------5-------", "tier": 2, "gain_db": -10, "sends": {"cosmos": 0.15}},
+        "whale":   {"pattern": "scatter", "insts": ["whale"], "density": 0.25, "low": "D3", "high": "D5", "tier": 3, "gain_db": -12, "sends": {"cosmos": 0.5}}
+      }
+    },
+    "D": {
+      "name": "Derelict Core", "mood": "hollow, flickering, a reactor still breathing", "room": "ruins",
+      "progression": ["Dm9", "Dm9", "Bbmaj7#11", "Bbmaj7#11", "Gm6/9", "Gm6/9", "A7sus4b9", "A7", "Fmaj7#11", "Fmaj7#11", "Ebmaj7#11", "Ebmaj7#11", "Bbmaj9", "Bbmaj9", "Asus4", "A"],
+      "layers": {
+        "drone":   {"inst": "nebula", "pattern": "drone", "low": "D2", "tier": 1, "bed": true, "gain_db": -15, "sends": {"ruins": 0.4}},
+        "pings":   {"pattern": "scatter", "insts": ["satellite_ping", "beetle"], "density": 0.8, "low": "D5", "high": "D7", "tier": 1, "gain_db": -16, "sends": {"ruins": 0.5}},
+        "choir":   {"inst": "vocoder", "pattern": "pad", "voices": 3, "low": "D3", "high": "A4", "tier": 2, "gain_db": -16, "sends": {"ruins": 0.5}},
+        "bass":    {"inst": "acid", "pattern": "bass", "rhythm": "x..x..x.x..x..x.", "tier": 2, "gain_db": -12},
+        "motif":   {"inst": "waterphone", "pattern": "motif", "notes": "A4 D5 E5 F5 - - - - E5 - - - D5 - - -", "step": 0.5, "bars": [1, 9], "tonic": "D", "mode": "dorian", "tier": 3, "gain_db": -9, "sends": {"ruins": 0.5}}
+      }
+    },
+    "E": {
+      "name": "Warp Run", "mood": "pulsing, bright, the stars smear", "room": "hall",
+      "progression": ["Dmaj9", "E/D", "Dmaj9", "E/D", "Bm11", "Bm11", "Gmaj9", "Asus4", "Gmaj9", "A/G", "F#m11", "Bm9", "Em9", "F#m7", "Gmaj9", "A9sus4"],
+      "layers": {
+        "drums":   {"pattern": "drums", "kit": {"k": "kick_modern", "s": "snare", "h": "shaker"}, "rhythm": {"k": "x...x...x...x...", "s": "....x.......x...", "h": "xxxxxxxxxxxxxxxx"}, "tier": 1, "gain_db": -10},
+        "bass":    {"inst": "acid", "pattern": "bass", "rhythm": "x.x8x.x8x.x8x.a8", "tier": 1, "gain_db": -11},
+        "arp":     {"inst": "chip", "pattern": "arp", "rhythm": "xxxxxxxxxxxxxxxx", "shape": "updown", "low": "D5", "high": "D6", "tier": 2, "gain_db": -16, "pan": -0.3, "sends": {"echo": 0.2}},
+        "brass":   {"inst": "analog_brass", "pattern": "comp", "rhythm": "x.....x.....x...", "voices": 4, "tier": 2, "gain_db": -15},
+        "lead":    {"inst": "moog", "pattern": "motif", "notes": "A4 D5 E5 A5 - - F#5 E5 D5 - E5 - - - - -", "step": 0.5, "bars": [1, 5, 9, 13], "tier": 3, "gain_db": -10, "sends": {"hall": 0.3, "echo": 0.25}}
+      }
+    }
+  }
+}

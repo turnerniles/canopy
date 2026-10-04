@@ -181,7 +181,7 @@ footer{font-size:12px; color:var(--ink-3)}
     </div>
   </section>
 
-  <section class="panel" id="gameplay" hidden>
+  <section class="panel" id="gameplay">
     <h2>Gameplay <span id="gameStage" role="status">Exploring</span></h2>
     <div class="chips" id="gameStates" role="group" aria-label="Gameplay presets">
       <button class="chip" type="button" data-state="quiet">Exploring / quiet</button>
@@ -193,7 +193,21 @@ footer{font-size:12px; color:var(--ink-3)}
       <div class="param"><label for="g-progress">Progress<small>builds the score</small></label><input id="g-progress" type="range" min="0" max="100" value="0"><output id="v-progress">0%</output></div>
       <div class="param"><label for="g-performance">Performance<small>combo, momentum</small></label><input id="g-performance" type="range" min="0" max="100" value="0"><output id="v-performance">0%</output></div>
     </div>
-    <p class="pending">Layers enter on the next 4-bar phrase. Movement changes the filter immediately. Soundtrack changes restart playback.</p>
+    <div class="group-label" style="margin-top:12px">Game events <span style="font-weight:400;color:var(--ink-3)">· quantized to the beat, in key</span></div>
+    <div class="chips" id="gameEvents" role="group" aria-label="Game events">
+      <button class="chip" type="button" data-event="collect">Collect</button>
+      <button class="chip" type="button" data-event="jump">Jump</button>
+      <button class="chip" type="button" data-event="checkpoint">Checkpoint</button>
+      <button class="chip" type="button" data-event="secret">Secret</button>
+      <button class="chip" type="button" data-event="hurt">Hurt</button>
+      <button class="chip" type="button" data-event="death">Death</button>
+      <button class="chip" type="button" data-event="respawn">Respawn</button>
+      <button class="chip" type="button" data-event="victory">Victory</button>
+      <button class="chip" type="button" data-event="boss">Boss</button>
+      <button class="chip" type="button" data-event="boss_end">Boss end</button>
+      <button class="chip" type="button" id="pauseGame" aria-pressed="false">Pause menu</button>
+    </div>
+    <p class="pending">Layers enter on the next 4-bar phrase. Movement changes the filter immediately. Events land on the next 16th, beat or bar. Soundtrack changes restart playback.</p>
   </section>
   <section class="deck">
     <div class="panel">
@@ -291,6 +305,7 @@ footer{font-size:12px; color:var(--ink-3)}
 
 <script src="space.js"></script>
 <script src="fusion.js"></script>
+<script src="events.js"></script>
 <script>
 (() => {
 'use strict';
@@ -299,8 +314,13 @@ const MODE = ['jungle','space',...Object.keys(CanopyFusion.modes)].includes(requ
 const SPACE = MODE === 'space';
 const FUSION = CanopyFusion.modes[MODE] ? CanopyFusion.create(MODE) : null;
 const SYNTH = FUSION || (SPACE ? CanopySpace : null);
-const GAME = {movement:.3, progress:0, performance:0};
+// Movement defaults to fully open outside fusion modes, so the jungle and space mixes are unchanged until a game drives it.
+const GAME = {movement:FUSION ? .3 : 1, progress:0, performance:0};
+const G = {boss:false, dead:false, paused:false, chain:null, listeners:{bar:new Set(), phrase:new Set(), area:new Set()}};
 const gameState = () => ({...P,...GAME});
+const musicState = () => G.boss ? {...gameState(), intensity:1} : gameState();
+const effI = () => CanopyFusion.energy(musicState());   // progress and performance raise effective intensity
+const arrMode = () => G.boss ? 'full' : UI.mode;
 const qs = (s, r = document) => r.querySelector(s);
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -474,11 +494,20 @@ function initAudio(){
   E.verb = ctx.createConvolver(); E.verb.buffer = makeIR(ctx, FUSION ? (FUSION.config.reverb || (MODE === 'mine' ? 1.5 : MODE === 'underwater' ? 4.8 : 2.8)) : 3.6);
   E.send = ctx.createGain(); E.send.gain.value = 0.08;
   E.pre.connect(E.lp); E.lp.connect(E.comp); E.lp.connect(E.send); E.send.connect(E.verb); E.verb.connect(E.comp);
-  E.comp.connect(E.master); E.master.connect(ctx.destination);
+  // game-event chain: music bed -> mu (death fade) -> muDuck (victory) -> muLp (death filter) -> fx (hurt dip) -> fxLp (hurt filter) -> pre;
+  // master: comp -> pauseLp -> pauseG (pause menu) -> master
+  const filt = f => { const b = ctx.createBiquadFilter(); b.type = 'lowpass'; b.frequency.value = f; b.Q.value = .5; return b; };
+  E.mu = ctx.createGain(); E.muDuck = ctx.createGain(); E.muLp = filt(20000); E.fx = ctx.createGain(); E.fxLp = filt(20000);
+  E.mu.connect(E.muDuck); E.muDuck.connect(E.muLp); E.muLp.connect(E.fx); E.fx.connect(E.fxLp); E.fxLp.connect(E.pre);
+  E.pauseLp = filt(G.paused ? 500 : 20000); E.pauseG = ctx.createGain(); E.pauseG.gain.value = G.paused ? .355 : 1;
+  E.comp.connect(E.pauseLp); E.pauseLp.connect(E.pauseG); E.pauseG.connect(E.master); E.master.connect(ctx.destination);
+  E.evBus = ctx.createGain(); E.evBus.gain.value = .75; E.evBus.connect(E.comp);
+  E.evSend = ctx.createGain(); E.evSend.gain.value = .18; E.evBus.connect(E.evSend); E.evSend.connect(E.verb);
+  if (G.dead){ E.mu.gain.value = 0; E.muLp.frequency.value = 250; }
   for (const l of LAYERS){
     const inp = ctx.createGain(), out = ctx.createGain(), duck = ctx.createGain(), an = ctx.createAnalyser();
     an.fftSize = 512; an.smoothingTimeConstant = 0;
-    inp.connect(duck); duck.connect(out); out.connect(E.pre); out.connect(an);
+    inp.connect(duck); duck.connect(out); out.connect(JUNGLE.has(l) ? E.fx : E.mu); out.connect(an);
     out.gain.value = JUNGLE.has(l) ? 1 : UI.music;
     E.bus[l] = {inp, out, duck, an, buf:new Float32Array(512), level:0, peak:0};
   }
@@ -502,9 +531,9 @@ function chooseSection(){
   return argmax(sc);
 }
 function dirStep(kind){
-  const I = P.intensity, M = P.mystery;
+  const I = effI(), M = P.mystery;
   const maxL = Math.max(1, Math.min(4, Math.round(2.6 + 1.8 * I - 1.3 * M)));
-  if (UI.mode !== 'breathe'){ Dir.level = {sparse:1, medium:2, full:4}[UI.mode]; return; }
+  if (arrMode() !== 'breathe'){ Dir.level = {sparse:1, medium:2, full:4}[arrMode()]; return; }
   if (kind === 'new'){ Dir.level = Math.min(Math.max(Dir.level, 1), 2); Dir.dir = 'up'; return; }
   if (Dir.dir === 'up'){
     Dir.level = Math.min(maxL, Dir.level + (I > .75 ? 2 : 1));
@@ -518,7 +547,7 @@ function dirStep(kind){
   Dir.level = Math.min(Dir.level, maxL);
 }
 function musicGain(s){
-  const I = P.intensity, O = P.openness, W = P.water, M = P.mystery;
+  const I = effI(), O = P.openness, W = P.water, M = P.mystery;
   const m = {drums:(.5 + .7 * I) * (1 - .45 * O) * (1 - .6 * M), shaker:(.6 + .5 * I) * (1 - .4 * O) * (1 - .4 * M),
     marimba:(.45 + .7 * I) * (1 - .3 * O) * (1 - .5 * M), bass:.75 + .3 * I, woods:(.8 + .2 * M) * (1 - .2 * I),
     keys:.8 + .2 * O, pad:.7 + .4 * O + .2 * W, kalimba:.7 + .4 * W}[s];
@@ -526,7 +555,7 @@ function musicGain(s){
 }
 function takeFor(sec, pass){ return TAKES[(E.takeBase[sec] + pass) % 4]; }
 function arrange(sec, pass){
-  const I = P.intensity, O = P.openness, W = P.water, M = P.mystery, t = {};
+  const I = effI(), O = P.openness, W = P.water, M = P.mystery, t = {};
   t[takeFor(sec, pass)] = .92 + .15 * M;
   t.water = clamp(WATER_BASE[sec] * (.35 + .9 * W), 0, 1.25);
   t.wildlife = clamp(.55 + .35 * I + .25 * M, 0, 1.2);
@@ -536,7 +565,7 @@ function arrange(sec, pass){
   for (let i = 0; i < L; i++) for (const s of groups[i]) if (has(sec, s)) t[s] = musicGain(s);
   if (FUSION) {
     for (const key of Object.keys(t)) delete t[key];
-    Object.assign(t,FUSION.arrange(gameState(),UI.mode,takeFor(sec,pass)));
+    Object.assign(t,FUSION.arrange(musicState(),arrMode(),takeFor(sec,pass)));
   }
   for (const l of LAYERS){
     const f = UI.force[l];
@@ -545,6 +574,7 @@ function arrange(sec, pass){
     if (f === 'on') t[key] = Math.max(t[key] || 0, .9);
     if (f === 'off') t[key] = 0;
   }
+  if (G.dead) for (const key in t) if (!JUNGLE.has(base(key))) delete t[key];   // after 'death': ambience only until 'respawn'
   return t;
 }
 function leadin(sec, stem, k){
@@ -582,7 +612,8 @@ function playTail(buf, stem, t, gain){
   s.connect(g); g.connect(E.bus[stem].inp); s.start(t);
 }
 function playStinger(name, tb, gain){
-  if (SYNTH || !E.stingers || !E.stingers[name]) return;
+  if (SYNTH) return synthTransition(name, tb, gain);
+  if (!E.stingers || !E.stingers[name]) return;
   const t0 = tb - BAR;
   if (t0 < E.ctx.currentTime + .02) return;
   const s = E.ctx.createBufferSource(); s.buffer = E.stingers[name];
@@ -590,6 +621,88 @@ function playStinger(name, tb, gain){
   s.connect(g); g.connect(E.stBus); s.start(t0);
   if (name === 'shower') Scene.rainAt(tb - .6, tb + 5);
   if (name === 'flock') Scene.flockAt(tb);
+}
+
+// ------------------------------------------------------------------ game events (events.js)
+const PALETTE = CanopyEvents.palette(MODE), KEY = FUSION ? FUSION.config.key : 'D major';
+function clockInst(t){ let inst = E.inst; if (inst && inst.prev && t < inst.start) inst = inst.prev; return inst; }
+function chordAt(t){
+  const inst = clockInst(t); if (!inst || !META) return 'Dmaj9';
+  const pos = ((t - inst.start) % LOOP + LOOP) % LOOP, bar = Math.min(15, Math.floor(pos / BAR + 1e-6));
+  return CanopyEvents.parse(META.sections[inst.sec].chords[bar], (pos % BAR) / BAR);
+}
+function grid(){ const now = E.ctx.currentTime, inst = clockInst(now); return {now, origin:inst.start, bpm:60 / BEAT, chord:chordAt, key:KEY, palette:PALETTE}; }
+function duck(gainP, freqP, t, gain, cutoff, hold, release){
+  for (const [p, v, rest] of [[gainP, gain, 1], [freqP, cutoff, 20000]]) if (p && v != null){
+    p.cancelScheduledValues(t); p.setTargetAtTime(v, t, .03); p.setTargetAtTime(rest, t + hold, release / 3);
+  }
+}
+function applyFx(fx){
+  for (const f of fx){
+    if (f.type === 'duck' && f.bus === 'all') duck(E.fx.gain, E.fxLp.frequency, f.time, f.gain, f.cutoff, f.hold, f.release);
+    else if (f.type === 'duck') duck(E.muDuck.gain, null, f.time, f.gain, null, f.hold, f.release);
+    else if (f.type === 'fade' || f.type === 'restore'){
+      const dead = f.type === 'fade', tau = f.dur / 3;
+      for (const [p, v] of [[E.mu.gain, dead ? 0 : 1], [E.muLp.frequency, dead ? f.cutoff : 20000]]){ p.cancelScheduledValues(f.time); p.setTargetAtTime(v, f.time, tau); }
+    }
+  }
+}
+// A synthesized transition (riser landing on the boundary) replaces the jungle stinger files in browser-rendered modes.
+function synthTransition(name, tb, gain){
+  if (G.dead || E.synthTb === tb) return;
+  const lead = Math.min(BAR, tb - E.ctx.currentTime - .05); if (lead < .3) return;
+  E.synthTb = tb;
+  const variant = {shower:'wash', gust:'wash', flock:'shimmer', far_cry:'dark', woodpecker_roll:'pulse', fill_hands:'pulse', fill_logs:'pulse'}[name] || 'riser';
+  const s = CanopyEvents.schedule('transition', {...grid(), time:tb, lead, variant});
+  CanopyEvents.play(E.ctx, E.stBus, s.notes, gain * (FUSION ? 1 : .8));
+}
+function gameEvent(name, opts = {}){
+  if (!CanopyEvents.NAMES.includes(name)) throw new TypeError('Unknown game event ' + name + '; expected one of ' + CanopyEvents.NAMES.join(', '));
+  if (!opts || typeof opts !== 'object') throw new TypeError('Event options must be an object');
+  if (name === 'death') G.dead = true;
+  if (name === 'respawn'){ G.dead = false; Dir.level = Math.min(Math.max(Dir.level, 1), 2); Dir.dir = 'up'; E.raiseDirty = true; }
+  if (name === 'boss'){ G.boss = true; Dir.level = 4; E.raiseDirty = true; }
+  if (name === 'boss_end' && G.boss){ G.boss = false; Dir.dir = 'hold'; Dir.hold = 1; }
+  paintGame();
+  if (!E.ctx || !E.playing || !E.inst) return {name, time:null};
+  const s = CanopyEvents.schedule(name, {...grid(), chain:G.chain, opts});
+  if (name === 'collect') G.chain = s.chain;
+  CanopyEvents.play(E.ctx, E.evBus, s.notes);
+  applyFx(s.fx);
+  return {name, time:s.at, notes:s.notes.length};
+}
+function setPause(on){
+  G.paused = !!on;
+  const b = qs('#pauseGame'); if (b) b.setAttribute('aria-pressed', G.paused ? 'true' : 'false');
+  if (!E.ctx) return;
+  const now = E.ctx.currentTime;
+  E.pauseLp.frequency.setTargetAtTime(G.paused ? 500 : 20000, now, .15);
+  E.pauseG.gain.setTargetAtTime(G.paused ? .355 : 1, now, .15);   // -9 dB
+}
+// boss/respawn: bring layers in on the next bar instead of waiting for the phrase (raises only; exits wait for phrases)
+function applyRaise(tbar){
+  const inst = E.inst; if (!inst) return true;
+  const n = Math.floor((tbar - inst.start) / PHRASE + 1e-6), pass = Math.floor(n / 4), t = arrange(inst.sec, pass);
+  let done = true;
+  for (const key in t){
+    const cur = inst.stems[key] ? inst.stems[key].val : 0;
+    if (t[key] <= cur + .01) continue;
+    if (!E.ready.has(inst.sec + '_' + key)){ loopBuf(inst.sec + '_' + key); done = false; continue; }
+    applyStem(inst, key, t[key], tbar, -1);
+  }
+  laneWrite(inst, n, Math.floor(((tbar - inst.start) % LOOP) / BAR + 1e-6));
+  return done;
+}
+function emit(name, payload){ for (const fn of G.listeners[name]) { try { fn(payload); } catch (e) { console.warn(e); } } }
+function clockEvents(now){
+  const inst = clockInst(now); if (!inst || now < inst.start) return;
+  const abs = Math.floor((now - inst.start) / BAR + 1e-6), bar = abs % 16;
+  if (E.clk && E.clk.inst === inst && E.clk.abs === abs) return;
+  const p = {bar:bar + 1, phrase:Math.floor(bar / 4) + 1, area:inst.sec, time:inst.start + abs * BAR, bpm:60 / BEAT};
+  if (!E.clk || E.clk.sec !== inst.sec) emit('area', {...p, name:META.sections[inst.sec].name});
+  E.clk = {inst, abs, sec:inst.sec};
+  if (bar % 4 === 0) emit('phrase', p);
+  emit('bar', p);
 }
 
 // apply one layer's target at boundary tb (phrase index k; k = -1 for a bar-level forced change)
@@ -779,14 +892,22 @@ function tick(){
     if (nb - now < .3 && nb - now > .05 && Math.abs(nb - tb) > .2){ E.forceDirty = false; applyForces(nb); }
     else if (Math.abs(nb - tb) <= .2) E.forceDirty = false;
   }
+  // boss / respawn: raise the arrangement on the next bar
+  if (E.raiseDirty && !E.planning){
+    const nb = inst.start + (Math.floor((now - inst.start) / BAR) + 1) * BAR;
+    if (nb - now < .3 && nb - now > .05) E.raiseDirty = !applyRaise(nb);
+  }
+  clockEvents(now);
   // stop idle sources
   for (const [key, st] of Object.entries(inst.stems)){
     if (st.val <= .001 && now > st.idleAt){ try { st.src.stop(); } catch (e) {} st.src.disconnect(); delete inst.stems[key]; }
   }
   // master effects follow the environment
-  const cutoff = FUSION ? 650 + 16000 * Math.pow(GAME.movement,.8) * (1 - .3 * P.mystery) : 19000 - 10500 * Math.pow(P.mystery, 1.4);
+  // Movement opens the master low-pass in every mode (jungle/space: from 1.2 kHz up to the Mystery ceiling, log-spaced).
+  const ceil = 19000 - 10500 * Math.pow(P.mystery, 1.4);
+  const cutoff = FUSION ? 650 + 16000 * Math.pow(GAME.movement,.8) * (1 - .3 * P.mystery) : 1200 * Math.pow(ceil / 1200, Math.pow(GAME.movement, .7));
   if (FUSION) {
-    const depth = (.16 + .55 * FUSION.energy(gameState())) * Math.min(1, levelOf(inst,'drums'));
+    const depth = (.16 + .55 * FUSION.energy(musicState())) * Math.min(1, levelOf(inst,'drums'));
     // Schedule beat-synchronous ducking ahead of the audio clock, independent of frame rate.
     const nextBeat = Math.max(0,Math.ceil((now-inst.start)/BEAT));
     if (E.duckInst !== inst) { E.duckInst = inst; E.duckBeat = nextBeat - 1; }
@@ -813,7 +934,7 @@ async function start(){
     await E.ctx.resume();
     const sec = chooseSection();
     setStatus('Loading ' + META.sections[sec].name + '…');
-    Dir.level = UI.mode === 'breathe' ? 1 : {sparse:1, medium:2, full:4}[UI.mode]; Dir.dir = 'up';
+    Dir.level = arrMode() === 'breathe' ? 1 : {sparse:1, medium:2, full:4}[arrMode()]; Dir.dir = 'up';
     E.takeBase[sec] = E.visits[sec]; E.visits[sec] = (E.visits[sec] + 1) % 4;
     E.lanes.clear();
     const t = arrange(sec, 0);
@@ -863,7 +984,7 @@ function stop(){
   E.master.gain.setValueAtTime(E.master.gain.value, now);
   E.master.gain.linearRampToValueAtTime(.0001, now + .35);
   const inst = E.inst;
-  E.playing = false; E.inst = null; E.plannedUntil = 0;
+  E.playing = false; E.inst = null; E.plannedUntil = 0; E.clk = null;
   setTimeout(() => {
     if (inst) for (const st of Object.values(inst.stems)){ try { st.src.stop(); st.src.disconnect(); } catch (e) {} }
   }, 420);
@@ -906,9 +1027,10 @@ qs('#modes').addEventListener('click', e => {
 function buildAreaChips(){
   const box = qs('#areas');
   AREAS.forEach(a => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.area = a; b.setAttribute('aria-pressed', 'false');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.area = a; b.setAttribute('aria-pressed', !UI.follow && UI.pinned === a ? 'true' : 'false');
     b.innerHTML = '<span class="dot"></span>' + META.sections[a].name; box.appendChild(b);
   });
+  qs('#areas [data-area="auto"]').setAttribute('aria-pressed', UI.follow ? 'true' : 'false');
   box.addEventListener('click', e => {
     const b = e.target.closest('[data-area]'); if (!b) return;
     if (b.dataset.area === 'auto'){ UI.follow = true; } else { UI.follow = false; UI.pinned = b.dataset.area; }
@@ -1011,7 +1133,7 @@ function uiFrame(){
     pend = 'Heading to <b>' + META.sections[want].name + '</b> · ' + (bars === 0 ? 'now' : 'in ' + bars + (bars === 1 ? ' bar' : ' bars'));
     qs('#hudNext').textContent = META.sections[want].name + ' in ' + bars + ' bars';
   } else {
-    qs('#hudNext').textContent = inst ? ((!FUSION && Dir.level === 0) || UI.music <= .001 ? (FUSION ? 'Environment only' : SPACE ? 'Only the cosmos' : 'Only the jungle') : (FUSION ? FUSION.stage(gameState()) + ' · ' + (UI.mode === 'breathe' ? 'adaptive score' : UI.mode + ' arrangement') : 'Music bed · level ' + Dir.level + ' of 4')) : 'Press play';
+    qs('#hudNext').textContent = inst ? ((!FUSION && Dir.level === 0) || UI.music <= .001 ? (FUSION ? 'Environment only' : SPACE ? 'Only the cosmos' : 'Only the jungle') : (G.dead ? 'Ambience only · waiting for respawn' : FUSION ? FUSION.stage(musicState()) + ' · ' + (arrMode() === 'breathe' ? 'adaptive score' : arrMode() + ' arrangement') : 'Music bed · level ' + Dir.level + ' of 4')) : 'Press play';
   }
   qs('#pending').innerHTML = pend;
   // lanes
@@ -1282,7 +1404,7 @@ function loop(ts){
   let tA = performance.now() / 1000, beatPos = tA / BEAT;
   if (E.ctx && E.playing && E.inst){ tA = E.ctx.currentTime; beatPos = (tA - E.inst.start) / BEAT; }
   if (!E.playing && META) Scene.setArea(chooseSection(), 0, false);
-  if (FUSION && MODE !== 'canopy') CanopyFusion.frame(MODE,qs('#scene'),qs('#glow'),tA,FUSION.energy(gameState()),E.inst ? E.inst.sec : chooseSection());
+  if (FUSION && MODE !== 'canopy') CanopyFusion.frame(MODE,qs('#scene'),qs('#glow'),tA,FUSION.energy(musicState()),E.inst ? E.inst.sec : chooseSection());
   else if (SPACE) CanopySpace.frame(qs('#scene'), qs('#glow'), tA, E.inst ? E.inst.sec : chooseSection(), P.intensity);
   else Scene.frame(tA, beatPos, E.playing);
   if (META) uiFrame();
@@ -1308,7 +1430,7 @@ if (SPACE) {
   qs('#hudArea').textContent = 'Orbital Drift';
   qs('#hudMood').textContent = 'weightless, warm, slowly unfolding';
   qs('#hudNext').textContent = 'The cosmos is waiting';
-  qs('.notes').innerHTML = '<div class="panel full"><h3>A score for the stars</h3><p>Five destinations blend stellar drones, ion washes and distant radio signals with a breathing bed of nebula pads, glass keys, sub bass and electronic pulses. Every layer is synthesized in your browser.</p><p>Intensity builds the pulse; Openness leads to Deep Field; Nebula brings out Ion Nebula; Mystery moves into Derelict Station. Music bed at zero leaves only the space ambience. Area, arrangement, auto-explore and layer controls work just as they do in Jungle.</p><p>90 BPM · 16-bar loops · area changes on 8-bar boundaries. Changing soundtrack starts a fresh session; press Play to begin.</p><table><tbody id="areaTable"></tbody></table></div>';
+  qs('.notes').innerHTML = '<div class="panel full"><h3>A score for the stars</h3><p>Five destinations blend stellar drones, ion washes and distant radio signals with a breathing bed of nebula pads, glass keys, sub bass and electronic pulses. Each destination has its own 16-bar progression: the pad re-voices every chord, the sub bass follows the roots, the sequencer arpeggiates and a gliding theremin answers with fragments of the Canopy motif. Every layer is synthesized in your browser.</p><p>Intensity builds the pulse; Openness leads to Deep Field; Nebula brings out Ion Nebula; Mystery moves into Derelict Station. Music bed at zero leaves only the space ambience. Area, arrangement, auto-explore and layer controls work just as they do in Jungle.</p><p>90 BPM · 16-bar loops · area changes on 8-bar boundaries. Changing soundtrack starts a fresh session; press Play to begin.</p><table><tbody id="areaTable"></tbody></table></div>';
   const destinations = Object.values(CanopySpace.areas);
   PLACES.forEach((place, i) => place.name = destinations[i % destinations.length][0]);
   for (const a of AREAS) AREA_TEXT[a] = ['Stellar drone, ion wash, radio signals and beacon chimes', 'Nebula pad, sub bass, glass keys, sonar and electronic pulses'];
@@ -1327,40 +1449,72 @@ if (FUSION) {
   qs('.scale-ends span').textContent = 'Environment';
   qs('.scale-ends span:last-child').textContent = 'Full score';
   qs('[data-mode="breathe"]').textContent = 'Adaptive';
-  qs('#gameplay').hidden = false;
   qs('.notes').innerHTML = '<div class="panel full"><h3>' + config.name + '</h3><p>' + config.description + '</p><p><b>Exploring:</b> ' + (config.stages?.[0] || 'Atmosphere, breathy flute and a distant kick.') + ' <b>Action:</b> ' + (config.stages?.[1] || 'Organic rhythm, mallets and bass join the electronic groove.') + ' <b>Climax:</b> ' + (config.stages?.[2] || 'Strings, arpeggios or robotic vowels complete the mix.') + '</p><p>Intensity, progress and performance choose the build; Movement opens the global low-pass filter. Use Adaptive for gameplay response, or pin Sparse, Medium or Full. All layers share a 16-bar harmonic progression, with four-bar arrangement changes and eight-bar destination changes. Electronic layers duck on the kick. All instruments, creatures and mechanical sounds are synthesized.</p><p>Original procedural synthesis inspired by the requested acoustic and electronic palette. ' + config.bpm + ' BPM · ' + config.key + '. Each soundtrack uses its own tempo; changing soundtracks restarts playback.</p><div class="tbl"><table><thead><tr><th>Destination</th><th>Atmosphere</th><th>Music</th><th>Harmony</th></tr></thead><tbody id="areaTable"></tbody></table></div></div>';
   PLACES.forEach((place,i) => place.name = config.sections[i%5]);
   for (const a of AREAS) AREA_TEXT[a] = [[FUSION.labels.water, FUSION.labels.birds, FUSION.labels.amb].join(', '), config.description];
-  function paintGame(){
-    qs('#gameStage').textContent = FUSION.stage(gameState()) + ' · ' + Math.round(FUSION.energy(gameState())*100) + '% energy';
-    for (const key of Object.keys(GAME)) {
-      const el=qs('#g-'+key); el.value=Math.round(GAME[key]*100); paintSlider(el);
-      qs('#v-'+key).textContent=el.value+'%';
-    }
-  }
-  for (const key of Object.keys(GAME)) qs('#g-'+key).addEventListener('input',e=>{ GAME[key]=e.target.value/100; paintGame(); });
-  qs('#p-int').addEventListener('input',paintGame);
-  qs('#gameStates').addEventListener('click',e=>{
-    const button=e.target.closest('[data-state]'); if(!button) return;
-    const values={quiet:[.12,.08,0,0],action:[.55,.6,.4,.45],climax:[.95,1,.9,.9]}[button.dataset.state];
-    window.CanopyGame.setState({intensity:values[0],movement:values[1],progress:values[2],performance:values[3]});
-    qs('[data-mode="breathe"]').click();
-  });
-  // Same-origin host games can feed normalized telemetry without starting audio.
-  window.CanopyGame = Object.freeze({
-    setState(state){
-      if(!state || typeof state !== 'object') throw new TypeError('Game state must be an object');
-      const keys=['intensity','movement','progress','performance'];
-      for(const key of keys) if(key in state && (typeof state[key] !== 'number' || !Number.isFinite(state[key]))) throw new TypeError(key+' must be a finite number');
-      if('intensity' in state){ const el=qs('#p-int'); el.value=Math.round(clamp(state.intensity)*100); el.dispatchEvent(new Event('input')); }
-      for(const key of Object.keys(GAME)) if(key in state) GAME[key]=clamp(state[key]);
-      paintGame();
-      return {...gameState(),stage:FUSION.stage(gameState())};
-    },
-    getState(){ return {...gameState(),stage:FUSION.stage(gameState())}; }
-  });
-  paintGame();
 }
+
+// ------------------------------------------------------------------ game API (every soundtrack)
+function paintGame(){
+  const st = musicState();
+  qs('#gameStage').textContent = (G.dead ? 'Down · ' : G.boss ? 'Boss · ' : '') + CanopyFusion.stage(st) + ' · ' + Math.round(CanopyFusion.energy(st) * 100) + '% energy' + (G.paused ? ' · paused' : '');
+  for (const key of Object.keys(GAME)){
+    const el = qs('#g-' + key); el.value = Math.round(GAME[key] * 100); paintSlider(el);
+    qs('#v-' + key).textContent = el.value + '%';
+  }
+}
+for (const key of Object.keys(GAME)) qs('#g-' + key).addEventListener('input', e => { GAME[key] = e.target.value / 100; paintGame(); });
+qs('#p-int').addEventListener('input', paintGame);
+qs('#gameStates').addEventListener('click', e => {
+  const button = e.target.closest('[data-state]'); if (!button) return;
+  const values = {quiet:[.12,.08,0,0], action:[.55,.6,.4,.45], climax:[.95,1,.9,.9]}[button.dataset.state];
+  window.CanopyGame.setState({intensity:values[0], movement:values[1], progress:values[2], performance:values[3]});
+  qs('[data-mode="breathe"]').click();
+});
+qs('#gameEvents').addEventListener('click', e => {
+  const b = e.target.closest('[data-event]');
+  if (b) window.CanopyGame.event(b.dataset.event, b.dataset.event === 'jump' ? {sound:true} : {});
+});
+qs('#pauseGame').addEventListener('click', () => G.paused ? window.CanopyGame.resume() : window.CanopyGame.pause());
+function pinArea(a){
+  UI.follow = a === 'auto'; if (a !== 'auto') UI.pinned = a;
+  if (a !== 'auto' && UI.explore) setExplore(false);
+  document.querySelectorAll('#areas [data-area]').forEach(c => c.setAttribute('aria-pressed', c.dataset.area === a ? 'true' : 'false'));
+}
+const NUMERIC = ['intensity','movement','progress','performance','openness','water','mystery'];
+function snapshot(){
+  const st = musicState(), now = E.ctx ? E.ctx.currentTime : 0, inst = E.playing ? clockInst(now) : null;
+  const pos = inst ? Math.max(0, now - inst.start) % LOOP : 0;
+  return {...gameState(), area:UI.follow ? 'auto' : UI.pinned, currentArea:inst ? inst.sec : null, stage:CanopyFusion.stage(st), energy:CanopyFusion.energy(st),
+    boss:G.boss, dead:G.dead, paused:G.paused, playing:E.playing, bar:inst ? Math.floor(pos / BAR) + 1 : null, beat:inst ? Math.floor((pos % BAR) / BEAT) + 1 : null, bpm:60 / BEAT};
+}
+// Same-origin host games feed normalized telemetry and gameplay events; audio still needs the Play gesture.
+window.CanopyGame = Object.freeze({
+  setState(state){
+    if (!state || typeof state !== 'object') throw new TypeError('Game state must be an object');
+    for (const key of NUMERIC) if (key in state && (typeof state[key] !== 'number' || !Number.isFinite(state[key]))) throw new TypeError(key + ' must be a finite number');
+    if ('area' in state && !(state.area === 'auto' || AREAS.includes(state.area))) throw new TypeError("area must be 'A'..'E' or 'auto'");
+    for (const [id, oid, key] of sliders) if (key in state){
+      const el = qs('#' + id); el.value = Math.round(clamp(state[key]) * 100); el.dispatchEvent(new Event('input')); P[key] = clamp(state[key]);
+    }
+    for (const key of Object.keys(GAME)) if (key in state) GAME[key] = clamp(state[key]);
+    if ('area' in state) pinArea(state.area);
+    paintGame();
+    return snapshot();
+  },
+  getState: snapshot,
+  event: gameEvent,
+  pause(){ setPause(true); paintGame(); return snapshot(); },
+  resume(){ setPause(false); paintGame(); return snapshot(); },
+  on(name, fn){
+    if (!Object.hasOwn(G.listeners, name)) throw new TypeError("Unknown event '" + name + "'; use 'bar', 'phrase' or 'area'");
+    if (typeof fn !== 'function') throw new TypeError('Listener must be a function');
+    G.listeners[name].add(fn); return () => G.listeners[name].delete(fn);
+  },
+  off(name, fn){ if (Object.hasOwn(G.listeners, name)) G.listeners[name].delete(fn); },
+  events: Object.freeze([...CanopyEvents.NAMES]),
+});
+paintGame();
 
 // ------------------------------------------------------------------ boot
 fetch('meta.json').then(r => { if (!r.ok) throw new Error('meta.json HTTP ' + r.status); return r.json(); }).then(m => {
