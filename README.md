@@ -126,6 +126,20 @@ node player/space.test.cjs
 node player/events.test.cjs
 ```
 
+## KAPOK in the player
+
+Choose **KAPOK (Oldfield-style suite)** in the Soundtrack menu, or open `http://localhost:8000/kapok.html`. The page plays the 10-minute suite against a live score view:
+- a pixel-art climb up the kapok tree, from the roots to the stars
+- a movement timeline you can click to jump
+- a "now entering" ticker and every instrument currently sounding
+- the full credits for all 234 instruments
+- a heat strip per instrument family
+- the optional announcer for the Procession, scheduled on the audio clock and ducking the music
+
+`CanopyGame.event('collect' | 'checkpoint' | 'hurt' | 'secret' | 'victory')` lands on Kapok's own beat grid and chords, including the 15/8, 12/8 and 3/4 sections. `CanopyGame.on('bar' | 'movement', fn)` follows the piece.
+
+The page loads `audio/kapok.m4a`. If that binary isn't in the checkout, it falls back to the same bytes stored as base64 chunks in `audio/kapok_b64/`. Regenerate both with `python3 -m tracks.kapok_web ../out/kapok`.
+
 ## Canopy Orchestra: build your own soundtrack
 
 `src/orchestra/` turns Canopy from one soundtrack into a builder. See `docs/CRITIQUE.md` for why.
