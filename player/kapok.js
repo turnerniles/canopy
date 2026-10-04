@@ -177,11 +177,16 @@
     const cr = qs('#credits');
     D.credits.forEach((c, i) => {
       const el = document.createElement('div'); el.className = 'credit'; el.id = 'cr' + i;
-      el.innerHTML = `<time>${fmt(c.t)}</time><div><div class="n" style="color:${FAM[c.family] || 'inherit'}">${pretty(c.id)}</div><div class="d">${c.desc}</div></div>`;
+      el.innerHTML = `<time>${fmt(c.t)}</time><div><div class="n" style="color:${FAM[c.family] || 'inherit'}">${label(c.id)}</div><div class="d">${c.desc}</div></div>`;
       el.addEventListener('click', () => seek(c.t - .3)); cr.appendChild(el);
     });
   }
   const pretty = id => id.split('.')[1].replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+  // name plus its family when the preset name alone doesn't say what it is ("Pipe" -> "Pipe · organ")
+  const FAMWORD = {mallet:'mallets', metal:'metal', bell:'bells', drum:'drum', perc:'percussion', pluck:'plucked', guitar:'guitar',
+    bass:'bass', bowed:'strings', keys:'keys', organ:'organ', flute:'flute', reed:'reed', brass:'brass', voice:'voice', creature:'creature', synth:'synth'};
+  const label = id => { const [f, n] = id.split('.'), w = FAMWORD[f] || f, nice = pretty(id);
+    return n.includes(f) || n.includes(w.replace(/s$/, '')) ? nice : `${nice} · ${w}`; };
 
   let lastCredit = -1, nowKey = '';
   function updateUI(t){
@@ -202,7 +207,14 @@
       lastCredit = latest;
     }
     const c = D.credits[latest];
-    qs('#hudEnter').innerHTML = c && t - c.t < 6 ? `Now entering<br><b>${pretty(c.id)}</b><small>${c.desc}</small>` : '';
+    // The Procession: name the instrument being featured (from the announcer cues), even when it has been heard before
+    let feat = null;
+    for (let i = 0; i < D.mc.length; i++){
+      const entry = D.mc[i].at + D.mc[i].dur - .25, next = i + 1 < D.mc.length ? D.mc[i + 1].at + D.mc[i + 1].dur - .25 : entry + 9.6;
+      if (t >= entry - .3 && t < next - .3) feat = D.mc[i].text.replace(/^Plus \.\.\. /, '').replace(/!$/, '');
+    }
+    qs('#hudEnter').innerHTML = feat ? `Now featuring<br><b>${feat}</b>`
+      : c && t - c.t < 6 ? `Now entering<br><b>${label(c.id)}</b><small>${c.desc}</small>` : '';
     // who is sounding
     const on = [];
     for (const id in D.spans){ const s = D.spans[id]; let lo = 0, hi = s.length - 1, hit = false;
@@ -212,7 +224,7 @@
     if (key !== nowKey){
       nowKey = key; const box = qs('#now'); box.innerHTML = '';
       on.sort((a, b) => a.localeCompare(b)).forEach(id => { const s = document.createElement('span'); const fam = id.split('.')[0];
-        s.style.setProperty('--c', FAM[fam] || '#45C2BA'); s.textContent = pretty(id);
+        s.style.setProperty('--c', FAM[fam] || '#45C2BA'); s.textContent = label(id);
         const cr = D.credits.find(x => x.id === id); if (cr && t - cr.t < 6) s.className = 'new'; box.appendChild(s); });
       qs('#count').textContent = on.length;
     }

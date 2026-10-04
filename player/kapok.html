@@ -23,7 +23,7 @@ button,select{font:inherit; color:inherit}
 .brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
 .brand h1{font-family:var(--f-display); font-weight:600; font-size:clamp(30px,4.2vw,42px); line-height:1; margin:0; letter-spacing:.04em}
 .brand p{margin:0; color:var(--ink-2); font-size:14px}
-.transport{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.transport{display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end}
 .chip{border:1px solid var(--line); background:var(--panel); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
 .play{display:inline-flex; align-items:center; gap:10px; border:0; border-radius:999px; padding:10px 20px 10px 14px; background:var(--accent); color:var(--accent-ink); font-weight:600; cursor:pointer}
@@ -79,7 +79,7 @@ a{color:var(--accent)}
     </div>
     <div class="transport">
       <label for="soundscape" class="status">Soundtrack</label>
-      <select id="soundscape" class="chip" aria-label="Soundtrack"></select>
+      <select id="soundscape" class="chip" aria-label="Soundtrack" style="max-width:250px"></select>
       <span class="status" id="status" role="status">press play</span>
       <button class="play" id="play" type="button" aria-label="Play">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path id="playIcon" d="M8 5v14l11-7z"/></svg><span id="playLabel">Play</span>
