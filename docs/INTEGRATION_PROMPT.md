@@ -106,10 +106,29 @@ Expose four smoothed values from 0 to 1 (about 1–2 s exponential smoothing), p
 
 ### Game events
 
-- **Pause:** duck the music bed hard and the jungle a little, and add a low-pass. Resume in place, without restarting the loops.
-- **Death and respawn:** a short duck, then carry on. Don't restart the music on every respawn.
+- **Pause:** low-pass the mix to about 500 Hz and drop it about 9 dB. Resume in place, without restarting the loops.
+- **Death and respawn:** fade the music bed to ambience, then bring it back on the next bar after respawn. Don't restart the music on every respawn.
 - **Scene or level load:** keep the conductor alive across scenes that share the jungle. Preload the next level's likely areas.
 - **Mixing:** give music, ambience (the jungle layers), SFX and UI separate buses with their own volume settings. Put a gentle limiter on the master.
+
+### Musical gameplay events (port `player/events.js`)
+
+The web player's `CanopyGame.event(name)` is the reference. `CanopyEvents.schedule(name, {bpm, now, origin, chord, key, chain})` is a pure function: it returns notes `{time, midi, dur, gain, voice}` and bus actions, so port it as-is and play the notes with your engine's synth, or with short pitched one-shots from `oneshots/` (kalimba, marimba, bell). Quantize against the conductor's clock (`origin` = the current area's start), never frame time. The chord is the current bar's label from `docs/ENGINE.md`.
+
+| Game moment | Call | Music behaviour |
+|---|---|---|
+| Coin or fruit pickup | `collect` | next note of an in-chord ascending chain on the next 1/16; reset after 1.2 s without pickups |
+| Jump | `jump` with `{sound: true}` | optional soft tick on the next 1/16; off by default |
+| Checkpoint flag | `checkpoint` | rising chord arpeggio landing on the next beat |
+| Secret found | `secret` | sparkle glissando on the next 1/16 |
+| Damage | `hurt` | thud; low-pass and gain dip on the score for about 0.6 s |
+| Player dies | `death` | falling figure; music fades and filters over one bar; ambience only until respawn |
+| Respawn | `respawn` | music re-enters on the next bar; no restart |
+| Level complete | `victory` | two-bar fanfare from the next bar line; duck the music bed under it |
+| Boss arena | `boss` / `boss_end` | Full arrangement and intensity 1 from the next bar until the fight ends |
+| Pause menu | `pause()` / `resume()` | low-pass to about 500 Hz and −9 dB; keep the clock and loops running |
+
+Route event sounds to their own bus after the music ducks, so `hurt`, `death` and `victory` never duck themselves. Raise `bar`, `phrase` and `area` signals from the conductor, with the downbeat's DSP time, so visuals such as blinking platforms, pulsing lights and HUD beats can lock to the music.
 
 ### Performance
 
