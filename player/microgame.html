@@ -1,0 +1,101 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microgame Rush · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ground:#17101f; --panel:#221830; --panel-2:#2e2140; --ink:#F4EEF8; --ink-2:#C2B3D1; --ink-3:#8E7DA0;
+  --line:#3b2c50; --accent:#FFC93C; --accent-ink:#2a1a00; --hot:#FF4F79;
+  --f-display:"Pixelify Sans", ui-monospace, monospace;
+  --f-ui:"Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-ui); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px; margin:0 auto; padding:18px clamp(16px,3vw,28px) 56px; display:flex; flex-direction:column; gap:18px}
+button,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+.top{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+.brand h1{font-family:var(--f-display); font-weight:600; font-size:clamp(28px,4vw,40px); line-height:1; margin:0; letter-spacing:.03em}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:0; color:var(--ink-2); font-size:14px}
+.transport{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+.chip{border:1px solid var(--line); background:var(--panel); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.play{border:0; border-radius:999px; padding:10px 22px; background:var(--accent); color:var(--accent-ink); font-weight:700; cursor:pointer}
+.status{font-family:var(--f-mono); font-size:12px; color:var(--ink-2)}
+.screen{position:relative; width:100%; aspect-ratio:16/9; border-radius:14px; overflow:hidden; background:#000; box-shadow:0 0 0 6px #2e2140, 0 18px 40px -20px #000; cursor:pointer; user-select:none; touch-action:manipulation}
+.screen canvas{position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges}
+.hint{position:absolute; left:0; right:0; bottom:10px; text-align:center; font-family:var(--f-mono); font-size:12px; color:rgba(255,255,255,.7); pointer-events:none}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px}
+.panel h2{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); margin:0 0 10px; font-weight:600}
+.grid{display:grid; grid-template-columns:1.25fr 1fr; gap:18px}
+@media (max-width:820px){ .grid{grid-template-columns:1fr} }
+.stats{display:grid; grid-template-columns:repeat(5,1fr); gap:10px}
+.stat{background:var(--panel-2); border-radius:10px; padding:8px 10px}
+.stat b{display:block; font-family:var(--f-display); font-size:22px; font-weight:400}
+.stat small{color:var(--ink-3); font-size:11px; text-transform:uppercase; letter-spacing:.06em}
+.cues{display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:6px}
+.cues button{border:1px solid var(--line); background:var(--panel-2); border-radius:8px; padding:7px 8px; font-size:12.5px; text-align:left; cursor:pointer}
+.cues button small{display:block; color:var(--ink-3); font-family:var(--f-mono); font-size:10.5px}
+.log{font-family:var(--f-mono); font-size:12px; color:var(--ink-2); max-height:240px; overflow:auto; display:flex; flex-direction:column-reverse; gap:1px}
+.log div b{color:var(--ink); font-weight:500}
+.notes p{color:var(--ink-2); margin:.4em 0}
+code{font-family:var(--f-mono); font-size:12.5px; background:var(--panel-2); padding:1px 5px; border-radius:4px}
+</style>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>MICROGAME <span>RUSH</span></h1>
+      <p>A WarioWare-style cue system · 8 microgame styles × 4 speeds · Canopy Orchestra</p>
+    </div>
+    <div class="transport">
+      <label for="soundscape" class="status">Soundtrack</label>
+      <select id="soundscape" class="chip" aria-label="Soundtrack" style="max-width:250px"></select>
+      <button class="chip" id="lang" type="button" aria-pressed="false">Español</button>
+      <button class="chip" id="auto" type="button" aria-pressed="false">Auto-play</button>
+      <button class="play" id="start" type="button">Start run</button>
+    </div>
+  </header>
+
+  <section class="screen" id="screen" aria-label="Microgame screen — click, tap or press Space">
+    <canvas id="cv" width="320" height="180"></canvas>
+    <div class="hint" id="hint">Loading…</div>
+  </section>
+
+  <section class="panel">
+    <div class="stats">
+      <div class="stat"><small>Score</small><b id="sScore">0</b></div>
+      <div class="stat"><small>Lives</small><b id="sLives">4</b></div>
+      <div class="stat"><small>Speed</small><b id="sTier">1</b></div>
+      <div class="stat"><small>Tempo</small><b id="sBpm">120</b></div>
+      <div class="stat"><small>Now playing</small><b id="sCue" style="font-size:17px">—</b></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Cue board · audition any cue at any speed</h2>
+      <div class="chips" style="display:flex; gap:8px; margin-bottom:10px" id="tierPick"></div>
+      <div class="cues" id="cues"></div>
+    </section>
+    <section class="panel">
+      <h2>Cue log · scheduled on the audio clock</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+
+  <section class="panel notes">
+    <h2>How it works</h2>
+    <p>A WarioWare-style game doesn't use one long loop. It uses a <b>run</b> of short, bar-exact cues. A 2-bar <b>interlude</b> shows lives and score. Then comes a 2-bar <b>microgame</b> tune, in one of eight styles (chiptune, funk, mariachi, surf, jungle marimba, space disco, toy box, polka), while the fuse burns. A 1-bar <b>win</b> or <b>lose</b> jingle follows. Every 4 games there is a <b>speed up</b> to the next tempo tier (120 → 144 → 160 → 180 BPM). Game 12 is a <b>boss stage</b>. Everything is in C major or A minor, and the interlude ends on G7, so any cue can follow any other on the bar line.</p>
+    <p>Every cue is rendered by <code>src/tracks/microgame.py</code> on Canopy Orchestra's synthesized instruments, with no samples. Loops are seamless and come with ring-out tails. The engine pack, with OGG files per tier and <code>cues.json</code>, lands in <code>out/microgame/</code>.</p>
+    <p>API for a game: <code>CanopyGame.start()</code>, <code>CanopyGame.press()</code>, <code>CanopyGame.resolve(true|false)</code> (once per microgame; the result jingle lands on the next bar line), <code>CanopyGame.getState()</code>, and <code>CanopyGame.on('cue'|'beat'|'microgame'|'result'|'speedup'|'boss'|'gameover', fn)</code>.</p>
+  </section>
+</div>
+<script src="events.js"></script>
+<script src="microgame.js"></script>

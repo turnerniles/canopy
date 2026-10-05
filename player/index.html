@@ -161,7 +161,7 @@ footer{font-size:12px; color:var(--ink-3)}
     </div>
     <div class="transport">
       <label for="soundscape">Soundtrack</label>
-      <select id="soundscape" class="chip" aria-label="Soundtrack"><option value="jungle">Jungle</option><option value="space">Space</option><option value="canopy">Jungle Canopy Level</option><option value="mine">Mine Cart Level</option><option value="underwater">Underwater Level</option><option value="orbital">Orbital Rainforest</option><option value="crystal">Crystal Caverns</option><option value="greenhouse">Clockwork Greenhouse</option><option value="kapok">KAPOK (Oldfield-style suite)</option></select>
+      <select id="soundscape" class="chip" aria-label="Soundtrack"><option value="jungle">Jungle</option><option value="space">Space</option><option value="canopy">Jungle Canopy Level</option><option value="mine">Mine Cart Level</option><option value="underwater">Underwater Level</option><option value="orbital">Orbital Rainforest</option><option value="crystal">Crystal Caverns</option><option value="greenhouse">Clockwork Greenhouse</option><option value="kapok">KAPOK (Oldfield-style suite)</option><option value="microgame">Microgame Rush (WarioWare-style)</option></select>
       <span class="status" id="status" role="status">48 kHz stems · press play</span>
       <button class="play" id="play" type="button" aria-label="Play">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path id="playIcon" d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
@@ -311,6 +311,7 @@ footer{font-size:12px; color:var(--ink-3)}
 'use strict';
 const requestedMode = new URLSearchParams(location.search).get('soundscape');
 if (requestedMode === 'kapok') location.replace('kapok.html');
+if (requestedMode === 'microgame') location.replace('microgame.html');
 const MODE = ['jungle','space',...Object.keys(CanopyFusion.modes)].includes(requestedMode) ? requestedMode : 'jungle';
 const SPACE = MODE === 'space';
 const FUSION = CanopyFusion.modes[MODE] ? CanopyFusion.create(MODE) : null;
@@ -1415,6 +1416,7 @@ function loop(ts){
 qs('#soundscape').value = MODE;
 qs('#soundscape').addEventListener('change', e => {
   if (e.target.value === 'kapok') { location.assign('kapok.html'); return; }
+  if (e.target.value === 'microgame') { location.assign('microgame.html'); return; }
   const url = new URL(location.href);
   url.searchParams.set('soundscape', e.target.value);
   location.assign(url);

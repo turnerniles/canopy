@@ -8,7 +8,7 @@
   const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   const SOUNDTRACKS = [['jungle','Jungle'],['space','Space'],['canopy','Jungle Canopy Level'],['mine','Mine Cart Level'],
     ['underwater','Underwater Level'],['orbital','Orbital Rainforest'],['crystal','Crystal Caverns'],
-    ['greenhouse','Clockwork Greenhouse'],['kapok','KAPOK (Oldfield-style suite)']];
+    ['greenhouse','Clockwork Greenhouse'],['kapok','KAPOK (Oldfield-style suite)'],['microgame','Microgame Rush (WarioWare-style)']];
   const FAM = {mallet:'#E8A33A', metal:'#D9C36A', bell:'#F4E3A1', drum:'#D8643B', perc:'#C98C5A', pluck:'#9BCB6B',
     guitar:'#6FBF73', bass:'#3E9E6E', bowed:'#C77DB3', keys:'#7FA8E0', organ:'#8E8BD8', flute:'#62D0C6',
     reed:'#4FB0A8', brass:'#E0B04A', voice:'#F09AA7', creature:'#B5E061', synth:'#9C7BF0'};
@@ -18,7 +18,7 @@
   const sel = qs('#soundscape');
   for (const [v, n] of SOUNDTRACKS){ const o = document.createElement('option'); o.value = v; o.textContent = n; sel.appendChild(o); }
   sel.value = 'kapok';
-  sel.addEventListener('change', () => { if (sel.value !== 'kapok') location.href = 'index.html?soundscape=' + sel.value; });
+  sel.addEventListener('change', () => { if (sel.value !== 'kapok') location.href = sel.value === 'microgame' ? 'microgame.html' : 'index.html?soundscape=' + sel.value; });
 
   let D = null, ctx = null, audio = null, music = null, duck = null, master = null, mcBuf = null, ready = false;
   let mcOn = true, mcSources = [], mcDone = new Set(), lastBar = -1, lastMove = -1, chain = null;
