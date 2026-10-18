@@ -155,13 +155,17 @@
     const buf = await loadLevel(); await loadGlims();
     Object.assign(Lv, {on:true, auto, idx:0, hits:{perfect:0, good:0, miss:0}, glims:0, judged:new Set(), pops:[], lastSection:-1, lastBar:-1});
     Lv.t0 = ctx.currentTime + .3;
-    Lv.src = src(buf, E.music, Lv.t0);
-    Lv.src.s.onended = () => { if (Lv.on){ Lv.on = false; hint(`Finished — Perfect ${Lv.hits.perfect} · Good ${Lv.hits.good} · Miss ${Lv.hits.miss}`); } };
+    const me = Lv.src = src(buf, E.music, Lv.t0);
+    me.s.onended = () => { if (Lv.src === me && Lv.on){ Lv.on = false; hint(`Finished — Perfect ${Lv.hits.perfect} · Good ${Lv.hits.good} · Miss ${Lv.hits.miss}`); } };
     // glims are on the path: their notes are scheduled on the audio clock, so the melody is exact
-    for (const ev of D.level.beatmap) if (ev.action === 'G') src(B.glims['glim_' + ev.note], E.sfx, Lv.t0 + ev.t, {gain:.85});
+    Lv.glimSrcs = D.level.beatmap.filter(ev => ev.action === 'G').map(ev => src(B.glims['glim_' + ev.note], E.sfx, Lv.t0 + ev.t, {gain:.85}));
     hint(auto ? 'Watching: every move lands on the music' : 'Your turn! Space jump · F punch · ↓ slide');
   }
-  function stopLevel(){ if (Lv.src) try { Lv.src.s.stop(); } catch (e) {} Lv.on = false; Lv.src = null; }
+  function stopLevel(){
+    if (Lv.src) try { Lv.src.s.stop(); } catch (e) {}
+    for (const x of Lv.glimSrcs || []) try { x.s.stop(); } catch (e) {}
+    Lv.on = false; Lv.src = null; Lv.glimSrcs = [];
+  }
   const ACT = {J:'jump', P:'punch', S:'slide', G:'glim'};
   const WIN = {perfect:.065, good:.14};
   function input(kind){
@@ -305,7 +309,7 @@
       hero(110, 128, now);
       txt(w.name, 8, 12, 11, '#fff', 'left');
       txt(`${w.key} · ${w.bpm} BPM · ${['', 'explore', 'action', 'chase'][Wd.layer]}`, 8, 26, 8, 'rgba(255,255,255,.85)', 'left');
-      if (Wd.playing){ const bi = barIndex(w); txt(`bar ${bi + 1}/${w.bars} · ${w.chords[bi]}`, W_ - 8, 12, 9, '#fff', 'right'); if (Wd.lastBar !== bi){ Wd.lastBar = bi; emit('bar', {bar:bi, chord:w.chords[bi], world:w.id}); } }
+      if (Wd.playing && now >= Wd.t0){ const bi = barIndex(w); txt(`bar ${bi + 1}/${w.bars} · ${w.chords[bi]}`, W_ - 8, 12, 9, '#fff', 'right'); if (Wd.lastBar !== bi){ Wd.lastBar = bi; emit('bar', {bar:bi, chord:w.chords[bi], world:w.id}); } }
       if (Wd.auto && Wd.playing){ const cyc = Math.floor((now - Wd.t0) / (b * 4)) % 4, want = [1, 2, 3, 2][cyc]; if (want !== Wd.layer) setLayer(want); }
     }
     if (Wd.banner && now - Wd.banner.t < 1.6) txt(Wd.banner.text, W_ / 2, 50, 18, '#ffd23f');
