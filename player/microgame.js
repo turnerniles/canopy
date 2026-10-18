@@ -7,11 +7,11 @@
   const qs = s => document.querySelector(s);
   const SOUNDTRACKS = [['jungle','Jungle'],['space','Space'],['canopy','Jungle Canopy Level'],['mine','Mine Cart Level'],
     ['underwater','Underwater Level'],['orbital','Orbital Rainforest'],['crystal','Crystal Caverns'],
-    ['greenhouse','Clockwork Greenhouse'],['kapok','KAPOK (Oldfield-style suite)'],['microgame','Microgame Rush (WarioWare-style)']];
+    ['greenhouse','Clockwork Greenhouse'],['kapok','KAPOK (Oldfield-style suite)'],['microgame','Microgame Rush (WarioWare-style)'],['legends','Glimmer Legends (Rayman Legends-style)']];
   const sel = qs('#soundscape');
   for (const [v, n] of SOUNDTRACKS){ const o = document.createElement('option'); o.value = v; o.textContent = n; sel.appendChild(o); }
   sel.value = 'microgame';
-  sel.addEventListener('change', () => { location.href = sel.value === 'kapok' ? 'kapok.html' : 'index.html?soundscape=' + sel.value; });
+  sel.addEventListener('change', () => { location.href = ({kapok:'kapok.html', legends:'legends.html'})[sel.value] || 'index.html?soundscape=' + sel.value; });
 
   const TXT = {
     en:{tap:'TAP!', tap3:'TAP ×3!', wait:"DON'T TAP!", green:'WAIT FOR GREEN!', stop:'STOP ON THE STAR!', mash:'MASH!',

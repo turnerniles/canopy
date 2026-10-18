@@ -12,7 +12,7 @@ from .core import (REGISTRY, register, play, names, calibrate, save_calibration,
 # Instrument families register themselves on import. Missing modules are skipped
 # so the library still loads while a family is being built.
 _FAMILIES = ['inst_mallets', 'inst_drums', 'inst_strings', 'inst_keys',
-             'inst_winds', 'inst_voices', 'inst_creatures', 'inst_synths']
+             'inst_winds', 'inst_voices', 'inst_creatures', 'inst_synths', 'inst_legends']
 for _m in _FAMILIES:
     try:
         importlib.import_module(f'.{_m}', __name__)

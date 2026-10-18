@@ -151,6 +151,19 @@ The demo's five one-button microgames are Tap!, Tap ×3!, Don't tap!, Wait for g
 
 Render the engine pack (OGG per cue plus `cues.json`) with `cd src && python3 -m tracks.microgame --web`. The run grammar and integration notes are in `docs/MICROGAME.md`.
 
+## Glimmer Legends (Rayman Legends-style)
+
+Choose **Glimmer Legends** in the Soundtrack menu, or open `legends.html`. The pack has five themed worlds:
+- Briar Keep: a fairy-tale castle in 6/8
+- Toadstool Bayou: a swamp jug band with kazoo
+- Fiesta Calavera: day-of-the-dead mariachi
+- Lagoon Agents: undersea spy surf
+- Thunder Olympus: mythic temples
+
+Each world has three layers (explore, action, chase) and its own stingers. Collectible glims play the next chord tone, and have golden king versions.
+
+**Kazoo Rumble** is a musical level with its gameplay written into the score: every jump lands on a brass hit, every punch on a snare. Its beatmap drives a playable runner. See `docs/LEGENDS.md`; render with `cd src && python3 -m tracks.legends --web`.
+
 ## Canopy Orchestra: build your own soundtrack
 
 `src/orchestra/` turns Canopy from one soundtrack into a builder. See `docs/CRITIQUE.md` for why.
