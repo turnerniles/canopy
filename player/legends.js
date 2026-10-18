@@ -120,7 +120,7 @@
     const reset = !Wd.chain || ctx.currentTime - Wd.chain.at > 1.2;
     const idx = reset ? 0 : Math.min(tones.length - 1, Wd.chain.idx + 1);
     const midi = tones[idx], king = Wd.king && ctx.currentTime < Wd.kingUntil;
-    src(B.glims[(king ? 'king_' : 'glim_') + midi], E.sfx, at);
+    const gb = B.glims[(king ? 'king_' : 'glim_') + midi]; if (gb) src(gb, E.sfx, at);
     Wd.chain = {idx, at:ctx.currentTime, bar:b};
     Glims.burst(king);
     return {midi, king, time:at};
@@ -158,7 +158,7 @@
     const me = Lv.src = src(buf, E.music, Lv.t0);
     me.s.onended = () => { if (Lv.src === me && Lv.on){ Lv.on = false; hint(`Finished — Perfect ${Lv.hits.perfect} · Good ${Lv.hits.good} · Miss ${Lv.hits.miss}`); } };
     // glims are on the path: their notes are scheduled on the audio clock, so the melody is exact
-    Lv.glimSrcs = D.level.beatmap.filter(ev => ev.action === 'G').map(ev => src(B.glims['glim_' + ev.note], E.sfx, Lv.t0 + ev.t, {gain:.85}));
+    Lv.glimSrcs = D.level.beatmap.filter(ev => ev.action === 'G' && B.glims['glim_' + ev.note]).map(ev => src(B.glims['glim_' + ev.note], E.sfx, Lv.t0 + ev.t, {gain:.85}));
     hint(auto ? 'Watching: every move lands on the music' : 'Your turn! Space jump · F punch · ↓ slide');
   }
   function stopLevel(){

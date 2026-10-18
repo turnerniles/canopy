@@ -496,7 +496,7 @@ def musical_level(S):
     beatmap = []
     for bar, row in enumerate(ACTIONS):
         ch = LEVEL_PROG[bar]
-        tones = [m for m in range(nm('A5'), nm('A7') + 1) if m % 12 in th.pcs(ch)]
+        tones = [m for m in range(nm('E5'), nm('C7') + 1) if m % 12 in th.pcs(ch)]   # inside the glim range
         gi = 0
         for k, a in enumerate(row):
             if a == '.':
