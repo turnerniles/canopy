@@ -140,6 +140,30 @@ Choose **KAPOK (Oldfield-style suite)** in the Soundtrack menu, or open `http://
 
 The page loads `audio/kapok.m4a`. If that binary isn't in the checkout, it falls back to the same bytes stored as base64 chunks in `audio/kapok_b64/`. Regenerate both with `python3 -m tracks.kapok_web ../out/kapok`.
 
+## Microgame Rush (WarioWare-style)
+
+Choose **Microgame Rush** in the Soundtrack menu, or open `microgame.html`. It's a playable run made of bar-exact cues:
+- interlude → microgame (one of 8 styles) → win/lose jingle
+- a speed-up every 4 games, across 4 tempo tiers (120–180 BPM)
+- a boss at game 12, and 4 lives
+
+The demo's five one-button microgames are Tap!, Tap ×3!, Don't tap!, Wait for green and Stop on the star. The page has an auto-play bot, English and Spanish commands, and a cue board for auditioning every cue at every speed.
+
+Render the engine pack (OGG per cue plus `cues.json`) with `cd src && python3 -m tracks.microgame --web`. The run grammar and integration notes are in `docs/MICROGAME.md`.
+
+## Glimmer Legends (Rayman Legends-style)
+
+Choose **Glimmer Legends** in the Soundtrack menu, or open `legends.html`. The pack has five themed worlds:
+- Briar Keep: a fairy-tale castle in 6/8
+- Toadstool Bayou: a swamp jug band with kazoo
+- Fiesta Calavera: day-of-the-dead mariachi
+- Lagoon Agents: undersea spy surf
+- Thunder Olympus: mythic temples
+
+Each world has three layers (explore, action, chase) and its own stingers. Collectible glims play the next chord tone, and have golden king versions.
+
+**Kazoo Rumble** is a musical level with its gameplay written into the score: every jump lands on a brass hit, every punch on a snare. Its beatmap drives a playable runner. See `docs/LEGENDS.md`; render with `cd src && python3 -m tracks.legends --web`.
+
 ## Canopy Orchestra: build your own soundtrack
 
 `src/orchestra/` turns Canopy from one soundtrack into a builder. See `docs/CRITIQUE.md` for why.

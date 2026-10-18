@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glimmer Legends · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ground:#10131f; --panel:#181d2e; --panel-2:#222a42; --ink:#F2F4FA; --ink-2:#B6BED6; --ink-3:#7F89A8;
+  --line:#2c3552; --accent:#FFD23F; --accent-ink:#2b2100; --pink:#FF7AB6;
+  --f-display:"Pixelify Sans", ui-monospace, monospace;
+  --f-ui:"Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-ui); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px; margin:0 auto; padding:18px clamp(16px,3vw,28px) 56px; display:flex; flex-direction:column; gap:16px}
+button,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+.top{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+.brand h1{font-family:var(--f-display); font-weight:600; font-size:clamp(28px,4vw,40px); line-height:1; margin:0; letter-spacing:.03em}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:0; color:var(--ink-2); font-size:14px}
+.row{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.chip{border:1px solid var(--line); background:var(--panel); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.chip:disabled{opacity:.45; cursor:default}
+.play{border:0; border-radius:999px; padding:10px 22px; background:var(--accent); color:var(--accent-ink); font-weight:700; cursor:pointer}
+.status{font-family:var(--f-mono); font-size:12px; color:var(--ink-2)}
+.tabs{display:flex; gap:6px}
+.tabs button{border:1px solid var(--line); background:var(--panel); padding:8px 16px; border-radius:10px; cursor:pointer; font-weight:600}
+.tabs button[aria-selected="true"]{background:var(--panel-2); border-color:var(--accent); color:var(--accent)}
+.screen{position:relative; width:100%; aspect-ratio:16/9; border-radius:14px; overflow:hidden; background:#000; box-shadow:0 0 0 6px #222a42, 0 18px 40px -20px #000; user-select:none; touch-action:manipulation}
+.screen canvas{position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges}
+.hint{position:absolute; left:0; right:0; bottom:8px; text-align:center; font-family:var(--f-mono); font-size:12px; color:rgba(255,255,255,.75); pointer-events:none}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px}
+.panel h2{font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); margin:0 0 10px; font-weight:600}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media (max-width:820px){ .grid{grid-template-columns:1fr} }
+.stats{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
+.stat{background:var(--panel-2); border-radius:10px; padding:7px 10px}
+.stat b{display:block; font-family:var(--f-display); font-size:20px; font-weight:400}
+.stat small{color:var(--ink-3); font-size:11px; text-transform:uppercase; letter-spacing:.06em}
+.lanes{display:grid; grid-template-columns:70px 1fr; gap:4px 10px; align-items:center; font-size:12px; color:var(--ink-2)}
+.lanes canvas{width:100%; height:14px; border-radius:3px; background:var(--panel-2)}
+.notes p{color:var(--ink-2); margin:.4em 0}
+kbd,code{font-family:var(--f-mono); font-size:12px; background:var(--panel-2); padding:1px 5px; border-radius:4px}
+[hidden]{display:none !important}
+</style>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>GLIMMER <span>LEGENDS</span></h1>
+      <p>A Rayman Legends–inspired soundpack · 5 worlds · a musical level · Canopy Orchestra</p>
+    </div>
+    <div class="row">
+      <label for="soundscape" class="status">Soundtrack</label>
+      <select id="soundscape" class="chip" aria-label="Soundtrack" style="max-width:260px"></select>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabWorlds" aria-selected="true">Worlds</button>
+    <button role="tab" id="tabLevel" aria-selected="false">Musical level · Kazoo Rumble</button>
+  </div>
+
+  <section class="screen" id="screen" aria-label="Game screen">
+    <canvas id="cv" width="320" height="180"></canvas>
+    <div class="hint" id="hint">Loading…</div>
+  </section>
+
+  <!-- worlds mode -->
+  <section class="panel" id="worldsPanel">
+    <div class="row" id="worldChips"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="play" id="worldPlay" type="button">Play</button>
+      <span class="status">Layers (land on the next bar):</span>
+      <button class="chip" data-tier="1" type="button">Explore</button>
+      <button class="chip" data-tier="2" type="button">Action</button>
+      <button class="chip" data-tier="3" type="button" aria-pressed="true">Chase</button>
+      <button class="chip" id="autoLayer" type="button">Auto</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="chip" id="collect" type="button">Collect glim <kbd>G</kbd></button>
+      <button class="chip" id="kingBtn" type="button">King glims</button>
+      <button class="chip" data-sting="checkpoint" type="button">Checkpoint</button>
+      <button class="chip" data-sting="freed" type="button">Free the teensies</button>
+      <button class="chip" data-sting="death" type="button">Death</button>
+      <button class="chip" data-sting="complete" type="button">Level complete</button>
+    </div>
+  </section>
+
+  <!-- musical level mode -->
+  <section class="panel" id="levelPanel" hidden>
+    <div class="row">
+      <button class="play" id="levelAuto" type="button">Watch it (auto)</button>
+      <button class="play" id="levelPlay" type="button" style="background:var(--pink)">Play it yourself</button>
+      <button class="chip" id="levelStop" type="button">Stop</button>
+      <span class="status">Jump <kbd>Space</kbd>/<kbd>↑</kbd> · Punch <kbd>F</kbd>/<kbd>→</kbd> · Slide <kbd>↓</kbd>. Glims collect themselves and play the melody.</span>
+    </div>
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><small>Section</small><b id="sSection" style="font-size:16px">—</b></div>
+      <div class="stat"><small>Bar</small><b id="sBar">—</b></div>
+      <div class="stat"><small>Perfect / Good</small><b id="sHits">0 / 0</b></div>
+      <div class="stat"><small>Miss</small><b id="sMiss">0</b></div>
+      <div class="stat"><small>Glims</small><b id="sGlims">0</b></div>
+    </div>
+    <h2 style="margin-top:14px">The beatmap — every action is written into the score</h2>
+    <div class="lanes" id="lanes"></div>
+  </section>
+
+  <section class="panel notes">
+    <h2>What's in the pack</h2>
+    <p><b>Five worlds</b>, each a level theme in three layers that build with the action: explore, then action, then chase. <b>Briar Keep</b> is fairy-tale 6/8 with harp, pizzicato, bassoon and whistling. <b>Toadstool Bayou</b> is a swampy jug band with banjo, jaw harp, tuba, washboard and kazoo. <b>Fiesta Calavera</b> is a day-of-the-dead mariachi with guitarrón, accordion and trumpets in thirds. <b>Lagoon Agents</b> is undersea spy surf with vibes, walking bass, surf guitar, flute and muted brass. <b>Thunder Olympus</b> is mythic, with choir, harp, timpani, horns and a trumpet fanfare.</p>
+    <p><b>Glims</b> are the collectibles. Each pickup plays the next tone of the current chord, so a row of them plays a melody. <b>King glims</b> turn them golden, with octave shimmer and a tiny "ya!". Each world also has <b>stingers</b> in its own key: checkpoint, freed (the little creatures cheer), king, death and level complete.</p>
+    <p><b>Kazoo Rumble</b> is a musical level in the Rayman Legends tradition. It's a 48-bar gypsy-polka romp at 132 BPM whose gameplay is written into the music. Every jump lands on a brass "ba!" and a cymbal, every punch on a snare-and-clap hit, every slide on a swell, and the glims play the tune. The action lane is exported as a beatmap, so a level designer places obstacles on beats.</p>
+    <p>Everything is synthesized by Canopy Orchestra, with no samples and no quoted melodies. Render the pack with <code>cd src &amp;&amp; python3 -m tracks.legends --web</code>; the engine pack, with OGG files, the beatmap and <code>legends.json</code>, goes to <code>out/legends/</code>. API: <code>CanopyGame.setWorld(id)</code>, <code>setLayer(1–3)</code>, <code>collect()</code>, <code>king(on)</code>, <code>sting(name)</code>, <code>startLevel({auto})</code>, <code>input('jump'|'punch'|'slide')</code>, <code>getState()</code>, <code>on('bar'|'action'|'judgement'|'section', fn)</code>.</p>
+  </section>
+</div>
+<script src="events.js"></script>
+<script src="legends.js"></script>
